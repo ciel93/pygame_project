@@ -55,6 +55,7 @@ class Game:
         #ゲームオーバー
         self.game_over = False
         self.game_clear = False
+        self.grand_boss_defeated = False # 大ボスを倒したかどうかのフラグ
 
     def create_group(self):
         self.player_group = pygame.sprite.GroupSingle()
@@ -152,7 +153,8 @@ class Game:
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
     def grand_boss_death(self):
-        if not self.spawn_active and len(self.enemy_group) == 0:
+        # 大ボスを倒し、かつ全ての敵がいなくなったらクリア
+        if self.grand_boss_defeated and not self.spawn_active and len(self.enemy_group) == 0:
             self.game_clear = True
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
@@ -175,6 +177,7 @@ class Game:
             self.spawn_active = True
             self.current_wave = 0
             self.wave_spawned = 0
+            self.grand_boss_defeated = False # フラグをリセット
     
     def scroll_bg(self):
         self.bg_y = (self.bg_y + 1)% screen_height
@@ -218,28 +221,36 @@ class Game:
     def draw_boss_hp_bar(self, boss):
         """ボスのHPバーを画面上部に描画する"""
         # HPバーの位置とサイズ
-        bar_width = GAME_AREA_WIDTH - 200  # 画面幅より少し短く
-        bar_height = 20
+        bar_width = GAME_AREA_WIDTH - 200   # 画面幅より少し短く
+        bar_height = 25                     # 少し高さを出す
         bar_x = (GAME_AREA_WIDTH - bar_width) // 2
-        bar_y = 20
+        bar_y = 40 # 表示位置を下に下げる
 
         # HPの割合を計算
         hp_ratio = max(0, boss.health / boss.max_health)
 
-        # 背景バー
+        # 背景バー (非常に暗い灰色)
         bg_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
-        pygame.draw.rect(self.screen, (50, 50, 50), bg_rect) # 暗い灰色
+        pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
 
         # 前景HPバー
         fg_width = bar_width * hp_ratio
         fg_rect = pygame.Rect(bar_x, bar_y, fg_width, bar_height)
         
-        # HP残量に応じて色を変える
-        color = RED if hp_ratio < 0.3 else (255, 255, 0) if hp_ratio < 0.6 else GREEN
+        # HP残量に応じて色を変える (より鮮やかな色)
+        if hp_ratio < 0.2:
+            color = (255, 50, 50)  # 非常に低いHPで鮮やかな赤
+        elif hp_ratio < 0.5:
+            color = (255, 200, 0)  # 中程度のHPで鮮やかなオレンジ
+        else:
+            color = (50, 255, 50)  # 高いHPで鮮やかな緑
         pygame.draw.rect(self.screen, color, fg_rect)
 
-        # 枠線
-        pygame.draw.rect(self.screen, WHITE, bg_rect, 2)
+        # 枠線 (太くする)
+        pygame.draw.rect(self.screen, WHITE, bg_rect, 3)
+
+        # 「BOSS HP」テキストを追加
+        draw_text(self.screen, "BOSS HP", GAME_AREA_WIDTH // 2, bar_y - 15, 30, WHITE)
 
     def check_boss_defeat_and_convert_bullets(self):
         """ボスが倒されたかチェックし、残った敵弾をスコアに変換する"""
@@ -247,6 +258,9 @@ class Game:
             # BossEnemy またはそのサブクラス（GrandBossEnemy）が対象
             if isinstance(enemy, BossEnemy) and getattr(enemy, 'just_defeated', False):
                 score_per_bullet = 100  # 弾1つあたりのスコア
+                # 大ボスが倒されたことを記録
+                if isinstance(enemy, GrandBossEnemy):
+                    self.grand_boss_defeated = True
                 bullet_count = len(self.enemy_bullets)
                 self.score += bullet_count * score_per_bullet
                 self.enemy_bullets.empty()  # 全ての敵弾を消去

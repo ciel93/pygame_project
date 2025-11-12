@@ -24,13 +24,17 @@ class BossEnemy(Enemy):
         self.laevateinn_dir = random.choice([-1, 1])
         try:
             pre = pygame.image.load('assets/img/enemy/boss.png').convert_alpha()
-            self.image = pygame.transform.scale(pre, (120, 120))
+            # 横幅を基準に、元のアスペクト比を維持してリサイズ
+            new_width = 120
+            aspect_ratio = pre.get_height() / pre.get_width()
+            new_height = int(new_width * aspect_ratio)
+            self.image = pygame.transform.scale(pre, (new_width, new_height))
         except Exception:
             surf = pygame.Surface((120,120), pygame.SRCALPHA)
             surf.fill(BOSS_ENEMY_COLOR)
             self.image = surf
         self.rect = self.image.get_rect(center=self.rect.center)
-        self.radius = 55 # 当たり判定を画像サイズより少し大きく
+        self.radius = self.rect.width / 2 * 0.9 # 当たり判定を画像の半径に合わせる
 
         # 撃破時に弾をスコアに変換するためのフラグ
         self.just_defeated = False
@@ -299,13 +303,17 @@ class GrandBossEnemy(BossEnemy):
         
         try:
             pre = pygame.image.load('assets/img/enemy/grand_boss.png').convert_alpha()
-            self.image = pygame.transform.scale(pre, (180, 180)) # サイズを大きく
+            # 横幅を基準に、元のアスペクト比を維持してリサイズ
+            new_width = 180
+            aspect_ratio = pre.get_height() / pre.get_width()
+            new_height = int(new_width * aspect_ratio)
+            self.image = pygame.transform.scale(pre, (new_width, new_height))
         except Exception:
             surf = pygame.Surface((180, 180), pygame.SRCALPHA)
             surf.fill(GRAND_BOSS_COLOR)
             self.image = surf
         self.rect = self.image.get_rect(center=self.rect.center)
-        self.radius = 85 # 当たり判定を画像サイズより少し大きく
+        self.radius = self.rect.width / 2 * 0.9 # 当たり判定を画像の半径に合わせる
 
         # パターン切替時間を短くして、より頻繁に攻撃させる
         self.pattern_change_time = 180 # 3秒

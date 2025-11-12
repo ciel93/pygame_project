@@ -102,8 +102,8 @@ class Enemy(pygame.sprite.Sprite):
             self.image.set_alpha(0)
             # アイテムドロップ判定
             if self.item_group is not None:
-                # 15%の確率でアイテムをドロップ
-                if random.random() < 0.15:
+                # 30%の確率でアイテムをドロップ
+                if random.random() < 0.30:
                     Item(self.item_group, self.rect.center, 'power')
             explosion = Explosion(self.explosion_group, self.rect.centerx, self.rect.centery)
             self.explosion = True
