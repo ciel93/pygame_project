@@ -30,6 +30,7 @@ class BossEnemy(Enemy):
             new_height = int(new_width * aspect_ratio)
             self.image = pygame.transform.scale(pre, (new_width, new_height))
         except Exception:
+            # 画像がない場合のフォールバック
             surf = pygame.Surface((120,120), pygame.SRCALPHA)
             surf.fill(BOSS_ENEMY_COLOR)
             self.image = surf
@@ -38,6 +39,9 @@ class BossEnemy(Enemy):
 
         # 撃破時に弾をスコアに変換するためのフラグ
         self.just_defeated = False
+
+        # レーヴァテインの予備動作で元の画像を保持するための変数
+        self.original_image = self.image.copy()
         
         # レーヴァテイン用の移動フラグ
         self.is_laevateinn_moving = False
@@ -236,12 +240,20 @@ class BossEnemy(Enemy):
             self.laevateinn_dir *= -1 # 前のスイングと逆方向から開始
             self.is_laevateinn_moving = False # 移動フラグをリセット
 
-        # パターンの前半（薙ぎ払い）
-        sweep_duration = self.pattern_change_time * 0.6 # パターン時間の60%を薙ぎ払いに使う
-        if self.pattern_timer <= sweep_duration:
-            # 弾の生成を8フレームに1回に間引く
-            if self.pattern_timer % 8 == 0:
-                progress = self.pattern_timer / sweep_duration # 薙ぎ払い時間内での進行度
+        pre_action_duration = 60 # 予備動作の時間（60フレーム = 1秒）
+
+        # フェーズ1: 予備動作
+        if self.pattern_timer < pre_action_duration:
+            # ボスの色を赤く点滅させて力を溜める演出
+            self.image = self.original_image.copy() # 毎回、元の画像からコピーして使用する
+            if self.pattern_timer % 10 < 5:
+                self.image.fill((255, 100, 100, 150), special_flags=pygame.BLEND_RGBA_ADD)
+
+        # フェーズ2: 薙ぎ払い
+        elif self.pattern_timer < pre_action_duration + (self.pattern_change_time * 0.6):
+            self.image = self.original_image.copy() # 色を元に戻す
+            if (self.pattern_timer - pre_action_duration) % 8 == 0:
+                progress = (self.pattern_timer - pre_action_duration) / (self.pattern_change_time * 0.6)
                 angle_deg = 90 - (80 * progress * self.laevateinn_dir)
                 angle_rad = math.radians(angle_deg)
                 direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
@@ -254,13 +266,13 @@ class BossEnemy(Enemy):
                     radius = 10 + (i / sword_length) * 12
                     red_val = 150 + (i / sword_length) * 105
                     EnemyBullet(self.enemy_bullets, pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
-        # パターンの後半（横移動しながら剣を突き出す）
+        # フェーズ3: 横移動しながら剣を突き出す
         else:
-            self.is_laevateinn_moving = True # 移動フラグを立てる
-            self.laevateinn_move_dir = self.laevateinn_dir # 薙ぎ払った方向へ移動
-            # 弾の生成を12フレームに1回に間引く
+            self.image = self.original_image.copy() # 色を元に戻す
+            self.is_laevateinn_moving = True
+            self.laevateinn_move_dir = self.laevateinn_dir
             if self.pattern_timer % 12 == 0:
-                angle_deg = 90 # 真下
+                angle_deg = 90
                 angle_rad = math.radians(angle_deg)
                 direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
 
@@ -309,6 +321,7 @@ class GrandBossEnemy(BossEnemy):
             new_height = int(new_width * aspect_ratio)
             self.image = pygame.transform.scale(pre, (new_width, new_height))
         except Exception:
+            # 画像がない場合のフォールバック
             surf = pygame.Surface((180, 180), pygame.SRCALPHA)
             surf.fill(GRAND_BOSS_COLOR)
             self.image = surf
@@ -317,6 +330,9 @@ class GrandBossEnemy(BossEnemy):
 
         # パターン切替時間を短くして、より頻繁に攻撃させる
         self.pattern_change_time = 180 # 3秒
+
+        # 親クラスと同様にoriginal_imageを初期化
+        self.original_image = self.image.copy()
         
         # HPによる発狂モードのフラグ
         self.enrage_mode = False

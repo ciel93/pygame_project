@@ -153,10 +153,9 @@ class Game:
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
     def grand_boss_death(self):
-        # 大ボスを倒し、かつ全ての敵がいなくなったらクリア
-        if self.grand_boss_defeated and not self.spawn_active and len(self.enemy_group) == 0:
+        # 大ボスを倒したらクリア
+        if self.grand_boss_defeated:
             self.game_clear = True
-            draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
     def reset(self):
         key = pygame.key.get_pressed()
