@@ -5,6 +5,7 @@ import math
 class EnemyBullet(pygame.sprite.Sprite):
     """敵の弾（direction プロパティ対応）"""
     def __init__(self, groups, x, y, target_group, speed=1, direction=None, radius=6, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal'):
+        radius=8 # 通常弾の半径を大きくする (6 -> 8)
         super().__init__(groups)
         self.screen = pygame.display.get_surface()
 

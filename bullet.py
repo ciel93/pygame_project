@@ -57,6 +57,9 @@ class HomingBullet(Bullet):
         self.pos = pygame.math.Vector2(self.rect.center)
         self.direction = pygame.math.Vector2(0, -1) # 初期方向は上
 
+        # 最初にターゲットを見つけたら、以降は再探索しない
+        self.has_initial_target = False
+
     def find_target(self):
         # ターゲットがいない、またはターゲットが倒された場合、新しいターゲットを探す
         if not self.target or not self.target.alive:
@@ -68,11 +71,15 @@ class HomingBullet(Bullet):
                     min_dist = dist
                     closest_enemy = enemy
             self.target = closest_enemy
+            if self.target:
+                self.has_initial_target = True
 
     def move(self):
-        self.find_target()
+        # 最初にターゲットを見つけるまで、またはターゲットが生存している間のみ追尾
+        if not self.has_initial_target:
+            self.find_target()
 
-        if self.target:
+        if self.target and self.target.alive:
             # ターゲットへの方向ベクトルを計算し、滑らかに追尾
             target_direction = (pygame.math.Vector2(self.target.rect.center) - self.pos).normalize()
             self.direction = self.direction.slerp(target_direction, self.turn_speed * 0.02)

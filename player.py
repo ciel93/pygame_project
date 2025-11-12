@@ -48,7 +48,7 @@ class Player(pygame.sprite.Sprite):
         self.max_power = 5   # 最大パワーレベル
 
         #体力
-        self.health = 1
+        self.health = 3
         self.alive = True
 
     def input(self):
