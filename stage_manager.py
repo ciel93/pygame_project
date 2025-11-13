@@ -3,7 +3,8 @@ import random
 from setting import *
 from enemy import Enemy
 from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy
-from boss import BossEnemy, GrandBossEnemy, Stage1Boss
+from boss import BossEnemy
+from boss_subclasses import GrandBossEnemy, Stage1Boss
 
 class StageManager:
     """ステージ進行と敵の出現を管理するクラス"""
@@ -19,7 +20,9 @@ class StageManager:
                 {'start': 10000,  'type': 'wave',   'count': 7,  'interval': 900},
                 {'start': 16000,  'type': 'tank',   'count': 6,  'interval': 1000},
                 {'start': 23000,  'type': 'normal', 'count': 12, 'interval': 500},
-                {'start': 30000,  'type': 'stage1_boss', 'count': 1, 'interval': 0},
+                {'start': 30000,  'type': 'stage1_boss', 'count': 1, 'interval': 0}, # ステージ1の最初のボス
+                {'start': 38000,  'type': 'normal', 'count': 15, 'interval': 400}, # ボス間のザコ敵
+                {'start': 45000,  'type': 'boss',   'count': 1,  'interval': 0},   # ステージ1の最終ボス
             ],
             2: [ # ステージ2
                 {'start': 0,      'type': 'normal', 'count': 15, 'interval': 400},
@@ -54,7 +57,7 @@ class StageManager:
         self.next_spawn_time = self.spawn_start_time + (interval if interval > 0 else 0)
         self.spawn_active = True
         self.stage_clear_timer = 0
-        return None
+        return self.stage
 
     def update(self, game_over, grand_boss_defeated):
         """敵の生成とステージ進行を管理する"""
@@ -79,12 +82,12 @@ class StageManager:
                 self.wave_spawned = 0
                 interval = self.spawn_schedule[self.current_wave]['interval']
                 self.next_spawn_time = now + (interval if interval > 0 else 0)
-        elif is_boss_alive:
-            if (self.current_wave + 1) < len(self.spawn_schedule):
-                self.spawn_schedule[self.current_wave + 1]['start'] = elapsed + 100
 
         wave = self.spawn_schedule[self.current_wave]
         if self.wave_spawned >= wave['count']:
+            # ボスが出現するウェーブで、ボスがまだ生きている場合は、ここで処理を中断して待機
+            if 'boss' in wave['type'] and is_boss_alive:
+                return None
             if self.current_wave == len(self.spawn_schedule) - 1 and len(self.enemy_group) == 0:
                 self.spawn_active = False
                 if not grand_boss_defeated:

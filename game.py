@@ -1,7 +1,8 @@
 import pygame
 from setting import *
 from player import Player
-from boss import BossEnemy, GrandBossEnemy, Stage1Boss
+from boss import BossEnemy
+from boss_subclasses import GrandBossEnemy, Stage1Boss
 from stage_manager import StageManager
 from support import draw_text
 
@@ -23,8 +24,14 @@ class Game:
         self.bg_images = []
         try:
             # ステージごとの背景画像をロード
-            self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg.png'),(screen_width,screen_height)))
-            self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg2.png'),(screen_width,screen_height)))
+            self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg.png'),(GAME_AREA_WIDTH,screen_height)))
+            
+            # ステージ2の背景はゲームエリアの幅に合わせ、縦横比を維持してリサイズ
+            pre_bg2_img = pygame.image.load('assets/img/background/bg2.jpg')
+            aspect_ratio = pre_bg2_img.get_height() / pre_bg2_img.get_width()
+            new_height = int(GAME_AREA_WIDTH * aspect_ratio)
+            self.bg_images.append(pygame.transform.scale(pre_bg2_img, (GAME_AREA_WIDTH, new_height)))
+
         except pygame.error:
             # 画像がない場合のフォールバック
             fallback_bg = pygame.Surface((screen_width, screen_height))
@@ -78,13 +85,17 @@ class Game:
 
             # ステージマネージャーをリセットしてステージ1から再開
             self.stage_manager.reset()
+            # 背景画像をステージ1のものに戻す
+            self.bg_img = self.bg_images[0]
+            
             self.grand_boss_defeated = False # フラグをリセット
     
     def scroll_bg(self):
-        self.bg_y = (self.bg_y + 1)% screen_height
-        # 背景画像をゲームエリアの幅に合わせて描画
-        self.screen.blit(self.bg_img,(0, self.bg_y - screen_height))
-        self.screen.blit(self.bg_img,(0, self.bg_y))
+        # 全ステージで共通のシンプルなスクロール処理を使用
+        bg_height = self.bg_img.get_height()
+        self.bg_y = (self.bg_y + 1) % bg_height
+        self.screen.blit(self.bg_img, (0, self.bg_y - bg_height))
+        self.screen.blit(self.bg_img, (0, self.bg_y))
 
     def draw_ui(self):
         """ゲームエリア右側のスコア表示画面を描画する"""

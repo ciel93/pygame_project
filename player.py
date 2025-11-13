@@ -1,6 +1,7 @@
 import pygame
 from setting import *
 from bullet import Bullet, HomingBullet
+from boss import BossEnemy
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, groups, x, y, enemy_group, enemy_bullets_group=None, item_group=None):
@@ -50,6 +51,12 @@ class Player(pygame.sprite.Sprite):
         #体力
         self.health = 3
         self.alive = True
+
+        # 無敵時間
+        self.invincible = False
+        self.invincible_duration = 2000  # 2秒（ミリ秒）
+        self.invincible_timer = 0
+        self.original_image = self.image.copy() # 点滅用に元の画像を保持
 
     def input(self):
         key = pygame.key.get_pressed()
@@ -161,24 +168,35 @@ class Player(pygame.sprite.Sprite):
         check_rect.center = self.rect.center
 
         #敵本体との当たり判定
-        # check_rectと衝突する可能性のある敵のみをリストアップ
-        nearby_enemies = [e for e in self.enemy_group if e.rect.colliderect(check_rect)]
-        for enemy in nearby_enemies:
-            if self.rect.colliderect(enemy.rect):
-                self.health -= 1
-        
-        # 共有の敵弾グループとの円形当たり判定（弾が残るように Game 側で管理するグループを使う）
-        if self.enemy_bullets is not None:
-            # 同様に、check_rectと衝突する可能性のある敵弾のみをリストアップ
-            nearby_bullets = [b for b in self.enemy_bullets if b.rect.colliderect(check_rect)]
-            for bullet in nearby_bullets:
-                bullet_pos = pygame.math.Vector2(bullet.rect.center)
-                if self.pos.distance_to(bullet_pos) < self.radius + getattr(bullet, 'radius', 4):
-                    self.health -= 1
-                    bullet.kill()
+        if not self.invincible:
+            # check_rectと衝突する可能性のある敵のみをリストアップ
+            nearby_enemies = [e for e in self.enemy_group if e.rect.colliderect(check_rect)]
+            for enemy in nearby_enemies:
+                if self.rect.colliderect(enemy.rect):
+                    # ボス以外の敵と衝突した場合
+                    if not isinstance(enemy, BossEnemy):
+                        self.take_damage()
+                        enemy.kill() # 敵を消滅させる
+                        break # 複数の敵と同時に当たらないようにループを抜ける
             
-            if self.health <= 0:
-                self.alive = False
+            # 共有の敵弾グループとの円形当たり判定
+            if self.enemy_bullets is not None:
+                # 同様に、check_rectと衝突する可能性のある敵弾のみをリストアップ
+                nearby_bullets = [b for b in self.enemy_bullets if b.rect.colliderect(check_rect)]
+                for bullet in nearby_bullets:
+                    bullet_pos = pygame.math.Vector2(bullet.rect.center)
+                    if self.pos.distance_to(bullet_pos) < self.radius + getattr(bullet, 'radius', 4):
+                        self.take_damage()
+                        bullet.kill()
+                        break # 複数の弾と同時に当たらないようにループを抜ける
+
+    def take_damage(self):
+        """ダメージを受けて無敵状態を開始する"""
+        self.health -= 1
+        self.invincible = True
+        self.invincible_timer = pygame.time.get_ticks()
+        if self.health <= 0:
+            self.alive = False
 
     def collision_item(self):
         """アイテムとの当たり判定と取得処理"""
@@ -204,6 +222,21 @@ class Player(pygame.sprite.Sprite):
         if self.alive == False:
             self.kill()
 
+    def update_invincibility(self):
+        """無敵状態の更新と点滅処理"""
+        if self.invincible:
+            now = pygame.time.get_ticks()
+            # 無敵時間が終了したら
+            if now - self.invincible_timer > self.invincible_duration:
+                self.invincible = False
+                # 現在の画像だけでなく、すべての画像リストの透明度をリセットする
+                for img in self.image_list:
+                    img.set_alpha(255)
+            else:
+                # 点滅処理
+                alpha = 255 if (now // 100) % 2 == 0 else 128
+                self.image.set_alpha(alpha)
+
     def update(self):
         self.input()
         self.move()
@@ -212,6 +245,7 @@ class Player(pygame.sprite.Sprite):
         self.collision_enemy()
         self.collision_item()
         self.attract_items()
+        self.update_invincibility()
         self.check_death()
 
          # 当たり判定オーバーレイ表示（デバッグ表示）

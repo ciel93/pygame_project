@@ -10,9 +10,10 @@ class BossEnemy(Enemy):
     def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
         super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
         self.speed = 1.0
-        self.health = 80
-        self.max_health = 80
+        self.health = 150
+        self.max_health = 150
         self.pattern_timer = 0
+        self.pattern_change_time = 240 # パターン切替時間（フレーム数）
         self.score_value = 100 # ボスのスコア
         self.pattern = 0
         self.angle = 0.0
@@ -46,6 +47,22 @@ class BossEnemy(Enemy):
         # レーヴァテイン用の移動フラグ
         self.is_laevateinn_moving = False
         self.laevateinn_move_dir = 1
+        
+        # 発狂モードのフラグ
+        self.enrage_mode = False
+        
+        # 攻撃パターンのディスパッチテーブル
+        self.attack_patterns = {
+            0: self._wave_spread,
+            1: self._burst_ring,
+            2: self._scatter_shot,
+            3: self._homing_shot,
+            4: self._double_helix,
+            5: self._radial_vortex,
+            6: self._laser_sweep,
+            7: self._icicle_fall,
+            8: self._laevateinn_sweep,
+        }
 
     def move(self):
         # 上に現れて、少し下がったら左右に往復する
@@ -71,38 +88,33 @@ class BossEnemy(Enemy):
         self.rect.center = self.pos
 
     def create_pattern(self):
+        # HPが半分以下になったら発狂モードに移行
+        if not self.enrage_mode and self.health <= self.max_health / 2:
+            self.enrage_mode = True
+            self.pattern_change_time = 180 # パターン切替を高速化
+
         # パターンを周期的に切り替えて弾を生成
-        # パターン8（待機）の場合は、短い時間で次のパターンへ移行
-        pattern_change_time = 120 if self.pattern == 8 else 240
+        # パターン9（待機）の場合は、短い時間で次のパターンへ移行
+        pattern_change_time = 120 if self.pattern == 9 else self.pattern_change_time
 
         self.pattern_timer += 1
         if self.pattern_timer > pattern_change_time:
             self.pattern_timer = 0
-            # 現在のパターンが待機(8)でなければ、次は待機パターンへ移行
-            if self.pattern != 8:
-                self.pattern = 8
+            if self.enrage_mode:
+                # 発狂モード: 激しい攻撃をランダムに選択
+                self.pattern = random.choice([4, 5, 6, 7]) # レーヴァテイン(8)は使用しない
             else:
-                # 待機が終わったら、次の攻撃パターンへ
-                # (self.pattern + 1) % 7 で 0-6 の攻撃パターンをループさせる
-                self.pattern = (self.pattern + 1) % 7
+                # 通常モード: パターンを順番に実行し、間に待機を挟む
+                if self.pattern != 9:
+                    self.pattern = 9 # 待機パターンへ
+                else:
+                    # 待機が終わったら、次の攻撃パターンへ
+                    # (self.pattern + 1) % 8 で 0-7 の攻撃パターンをループさせる
+                    self.pattern = (self.pattern + 1) % 8
 
-        if self.pattern == 0:
-            self._wave_spread()
-        elif self.pattern == 1:
-            self._burst_ring()
-        elif self.pattern == 2:
-            self._scatter_shot()
-        elif self.pattern == 3:
-            self._homing_shot()
-        elif self.pattern == 4:
-            self._double_helix()
-        elif self.pattern == 5:
-            self._radial_vortex()
-        elif self.pattern == 6: # レーザー薙ぎ払いパターン
-            self._laser_sweep()
-        elif self.pattern == 8: # 何もせずに待機するパターン
-            pass # 何も実行しない
-
+        # ディスパッチテーブルを使って攻撃パターンを実行
+        if self.pattern in self.attack_patterns:
+            self.attack_patterns[self.pattern]()
     def _wave_spread(self):
         # 横に波打つように縦列で弾を連続発射（少しずつ横ずれ）
         if self.pattern_timer % 15 == 0: # 発射間隔を広げて「まばらに」
@@ -163,20 +175,20 @@ class BossEnemy(Enemy):
 
     def _double_helix(self):
         """二重螺旋状に弾を発射する"""
-        if self.pattern_timer % 5 == 0: # 5フレーム毎に発射して滑らかな螺旋に
-            amplitude = 90  # 螺旋の幅を少し広げる
+        if self.pattern_timer % 8 == 0: # 8フレーム毎に発射して、隙間を粗くする
+            amplitude = 120  # 螺旋の幅を長くする
             # 螺旋の中心をゆっくりと左右に揺らし、安全地帯をなくす
             center_x = self.rect.centerx + math.cos(self.angle * 0.5) * 40
             
             # 螺旋1
             x1 = center_x + amplitude * math.sin(self.angle)
-            EnemyBullet(self.enemy_bullets, x1, self.rect.bottom, self.player_group, speed=2.5)
+            EnemyBullet(self.enemy_bullets, x1, self.rect.bottom, self.player_group, speed=3.5)
 
             # 螺旋2（位相を180度ずらす）
             x2 = center_x + amplitude * math.sin(self.angle + math.pi)
-            EnemyBullet(self.enemy_bullets, x2, self.rect.bottom, self.player_group, speed=2.5)
+            EnemyBullet(self.enemy_bullets, x2, self.rect.bottom, self.player_group, speed=3.5)
 
-            self.angle += 0.15 # 角度を更新して螺旋を描く
+            self.angle += 0.12 # 角度の更新を緩やかにして、縦に引き伸ばす
 
     def _radial_vortex(self):
         """中心から放射状に回転しながら弾を発射する"""
@@ -232,6 +244,14 @@ class BossEnemy(Enemy):
         # 左右の端（20度～160度）で反射するように動く
         if not (20 < self.laser_angle < 160):
             self.laser_sweep_dir *= -1
+
+    def _icicle_fall(self):
+        """画面上部からつららのように弾が降り注ぐパターン"""
+        if self.pattern_timer % 8 == 0: # 8フレームごとに弾を生成
+            x = random.randint(0, GAME_AREA_WIDTH)
+            speed = random.uniform(2.5, 5.0)
+            # 弾の色を青みがかった色にする
+            EnemyBullet(self.enemy_bullets, x, 0, self.player_group, speed=speed, color=(150, 200, 255))
 
     def _laevateinn_sweep(self):
         """東方風のレーヴァテイン薙ぎ払い"""
@@ -301,132 +321,3 @@ class BossEnemy(Enemy):
         # 爆発などは親に従う
         self.explosion_group.draw(self.screen)
         self.explosion_group.update()
-
-class GrandBossEnemy(BossEnemy):
-    """ゲームの最終ボス（大ボス）"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
-        
-        # 大ボス専用のパラメータで上書き
-        self.health = 300  # HPを大幅に増やす
-        self.score_value = 500 # 大ボスのスコア
-        self.max_health = 300
-        self.speed = 0.8   # 少しゆっくり動かす
-        
-        try:
-            pre = pygame.image.load('assets/img/enemy/grand_boss.png').convert_alpha()
-            # 横幅を基準に、元のアスペクト比を維持してリサイズ
-            new_width = 180
-            aspect_ratio = pre.get_height() / pre.get_width()
-            new_height = int(new_width * aspect_ratio)
-            self.image = pygame.transform.scale(pre, (new_width, new_height))
-        except Exception:
-            # 画像がない場合のフォールバック
-            surf = pygame.Surface((180, 180), pygame.SRCALPHA)
-            surf.fill(GRAND_BOSS_COLOR)
-            self.image = surf
-        self.rect = self.image.get_rect(center=self.rect.center)
-        self.radius = self.rect.width / 2 * 0.9 # 当たり判定を画像の半径に合わせる
-
-        # パターン切替時間を短くして、より頻繁に攻撃させる
-        self.pattern_change_time = 180 # 3秒
-
-        # 親クラスと同様にoriginal_imageを初期化
-        self.original_image = self.image.copy()
-        
-        # HPによる発狂モードのフラグ
-        self.enrage_mode = False
-
-    def create_pattern(self):
-        # HPが半分以下になったら発狂モードに移行
-        if not self.enrage_mode and self.health <= self.max_health / 2:
-            self.enrage_mode = True
-            self.pattern_change_time = 120 # パターン切替をさらに高速化
-
-        # パターン切替
-        self.pattern_timer += 1
-        if self.pattern_timer > self.pattern_change_time:
-            # 発狂モードでは、より激しい攻撃(4, 5)の頻度が上がる
-            if self.enrage_mode:
-                self.pattern = random.choice([0, 1, 2, 3, 4, 5, 6, 6, 7, 7]) # パターン7(レーヴァテイン)を追加
-            else:
-                self.pattern = random.randint(0, 6) # 通常時はレーザーまで
-            self.pattern_timer = 0
-        
-        # 選択されたパターンを実行（親クラスのメソッドを呼び出す）
-        if self.pattern == 0:
-            self._wave_spread()
-        elif self.pattern == 1:
-            self._burst_ring()
-        elif self.pattern == 2:
-            self._scatter_shot()
-        elif self.pattern == 3:
-            self._homing_shot()
-        elif self.pattern == 4:
-            self._double_helix()
-        elif self.pattern == 5:
-            self._radial_vortex()
-        elif self.pattern == 6:
-            self._laser_sweep()
-        else: # パターン7
-            self._laevateinn_sweep()
-
-    def update(self):
-        # BossEnemyのupdateメソッドを呼び出す
-        # これにより、move, create_pattern, 各種チェックが実行される
-        # GrandBossEnemyはBossEnemyの攻撃パターンをそのまま利用する
-        super().update()
-
-class Stage1Boss(BossEnemy):
-    """ステージ1専用のボス"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
-        
-        # ステージ1ボス専用のパラメータで上書き
-        self.health = 50
-        self.max_health = 50
-        self.score_value = 80
-        
-        try:
-            pre = pygame.image.load('assets/img/enemy/stage1_boss.png').convert_alpha()
-            new_width = 100
-            aspect_ratio = pre.get_height() / pre.get_width()
-            new_height = int(new_width * aspect_ratio)
-            self.image = pygame.transform.scale(pre, (new_width, new_height))
-        except Exception:
-            # 画像がない場合のフォールバック
-            surf = pygame.Surface((100, 100), pygame.SRCALPHA)
-            surf.fill((100, 100, 255)) # 青みがかった色
-            self.image = surf
-        self.rect = self.image.get_rect(center=self.rect.center)
-        self.radius = self.rect.width / 2 * 0.9
-
-        # パターン切替時間を設定
-        self.pattern_change_time = 180 # 3秒
-
-    def create_pattern(self):
-        """ステージ1ボス用のシンプルな攻撃パターン"""
-        self.pattern_timer += 1
-        if self.pattern_timer > self.pattern_change_time:
-            self.pattern_timer = 0
-            # 現在のパターンが待機(8)でなければ、次は待機パターンへ移行
-            if self.pattern != 8:
-                self.pattern = 8
-            else:
-                # 待機が終わったら、次の攻撃パターンへ (0, 1, 2をループ)
-                self.pattern = (self.pattern + 1) % 3
-
-        # 選択されたパターンを実行（親クラスのメソッドを呼び出す）
-        if self.pattern == 0:
-            # 5-way弾を扇状にばらまく
-            if self.pattern_timer % 40 == 0:
-                self._scatter_shot()
-        elif self.pattern == 1:
-            # プレイヤーを狙う弾を発射
-            if self.pattern_timer % 50 == 0:
-                self._homing_shot()
-        elif self.pattern == 2:
-            # 横に波打つように弾を発射
-            self._wave_spread()
-        elif self.pattern == 8: # 待機
-            pass
