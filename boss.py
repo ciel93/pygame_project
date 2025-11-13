@@ -376,3 +376,57 @@ class GrandBossEnemy(BossEnemy):
         # これにより、move, create_pattern, 各種チェックが実行される
         # GrandBossEnemyはBossEnemyの攻撃パターンをそのまま利用する
         super().update()
+
+class Stage1Boss(BossEnemy):
+    """ステージ1専用のボス"""
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+        
+        # ステージ1ボス専用のパラメータで上書き
+        self.health = 50
+        self.max_health = 50
+        self.score_value = 80
+        
+        try:
+            pre = pygame.image.load('assets/img/enemy/stage1_boss.png').convert_alpha()
+            new_width = 100
+            aspect_ratio = pre.get_height() / pre.get_width()
+            new_height = int(new_width * aspect_ratio)
+            self.image = pygame.transform.scale(pre, (new_width, new_height))
+        except Exception:
+            # 画像がない場合のフォールバック
+            surf = pygame.Surface((100, 100), pygame.SRCALPHA)
+            surf.fill((100, 100, 255)) # 青みがかった色
+            self.image = surf
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.radius = self.rect.width / 2 * 0.9
+
+        # パターン切替時間を設定
+        self.pattern_change_time = 180 # 3秒
+
+    def create_pattern(self):
+        """ステージ1ボス用のシンプルな攻撃パターン"""
+        self.pattern_timer += 1
+        if self.pattern_timer > self.pattern_change_time:
+            self.pattern_timer = 0
+            # 現在のパターンが待機(8)でなければ、次は待機パターンへ移行
+            if self.pattern != 8:
+                self.pattern = 8
+            else:
+                # 待機が終わったら、次の攻撃パターンへ (0, 1, 2をループ)
+                self.pattern = (self.pattern + 1) % 3
+
+        # 選択されたパターンを実行（親クラスのメソッドを呼び出す）
+        if self.pattern == 0:
+            # 5-way弾を扇状にばらまく
+            if self.pattern_timer % 40 == 0:
+                self._scatter_shot()
+        elif self.pattern == 1:
+            # プレイヤーを狙う弾を発射
+            if self.pattern_timer % 50 == 0:
+                self._homing_shot()
+        elif self.pattern == 2:
+            # 横に波打つように弾を発射
+            self._wave_spread()
+        elif self.pattern == 8: # 待機
+            pass

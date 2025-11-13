@@ -1,11 +1,8 @@
 import pygame
 from setting import *
 from player import Player
-from enemy import Enemy
-from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy
-from boss import BossEnemy, GrandBossEnemy
-import random, pygame, math
-from item import Item
+from boss import BossEnemy, GrandBossEnemy, Stage1Boss
+from stage_manager import StageManager
 from support import draw_text
 
 class Game:
@@ -23,34 +20,23 @@ class Game:
         self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group)
         
         #背景
-        self.pre_bg_img = pygame.image.load('assets/img/background/bg.png')
-        self.bg_img = pygame.transform.scale(self.pre_bg_img,(screen_width,screen_height))
+        self.bg_images = []
+        try:
+            # ステージごとの背景画像をロード
+            self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg.png'),(screen_width,screen_height)))
+            self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg2.png'),(screen_width,screen_height)))
+        except pygame.error:
+            # 画像がない場合のフォールバック
+            fallback_bg = pygame.Surface((screen_width, screen_height))
+            fallback_bg.fill((20, 0, 40))
+            self.bg_images.append(fallback_bg)
+            self.bg_images.append(fallback_bg)
+
+        self.bg_img = self.bg_images[0] # 初期背景
         self.bg_y = 0
 
-        #敵
-        self.timer = 0
-        # 敵生成の開始時刻（ミリ秒）と生成を許可するフラグ
-        self.spawn_start_time = pygame.time.get_ticks()
-        self.spawn_active = True
-
-         # ウェーブスケジュール（時間経過で順次切り替える）
-        # start: ウェーブ開始時刻（ミリ秒経過）、
-        # type: 敵種別、count: 生成数、interval: 同ウェーブ内の生成間隔（ms）
-        self.spawn_schedule = [
-            {'start': 0,      'type': 'normal', 'count': 8,  'interval': 800},
-            {'start': 5000,   'type': 'fast',   'count': 5, 'interval': 600},
-            {'start': 10000,  'type': 'wave',   'count': 7,  'interval': 900}, # WaveEnemyのウェーブを追加
-            {'start': 16000,  'type': 'tank',   'count': 6,  'interval': 1000},
-            {'start': 23000,  'type': 'normal', 'count': 12, 'interval': 500}, # 追加した通常敵ウェーブ1
-            {'start': 30000,  'type': 'normal', 'count': 15, 'interval': 400}, # 追加した通常敵ウェーブ2
-            {'start': 38000,  'type': 'boss',   'count': 1,  'interval': 0},
-            {'start': 48000,  'type': 'normal', 'count': 20, 'interval': 300}, # 中ボスと大ボスの間のウェーブ
-            {'start': 55000,  'type': 'fast',   'count': 8, 'interval': 400}, # FastEnemyのウェーブを追加
-            {'start': 65000,  'type': 'grand_boss', 'count': 1, 'interval': 0}, # 大ボスのウェーブを追加
-        ]
-        self.current_wave = 0
-        self.wave_spawned = 0
-        self.next_spawn_time = self.spawn_start_time + self.spawn_schedule[0]['interval']
+        # ステージ管理
+        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group)
 
         #ゲームオーバー
         self.game_over = False
@@ -64,92 +50,11 @@ class Game:
         self.enemy_bullets = pygame.sprite.Group()
         self.item_group = pygame.sprite.Group()
 
-    def create_enemy(self):
-        # spawn が無効なら何もしない
-        if not self.spawn_active:
-            return
-
-        now = pygame.time.get_ticks()
-        elapsed = now - self.spawn_start_time
-
-        # ボスが存在するかチェック
-        is_boss_alive = any(isinstance(enemy, BossEnemy) for enemy in self.enemy_group)
-
-        # ウェーブを進める（経過時間が次ウェーブ開始を超えていれば進行）
-        # ただし、ボスが生きている間は次のウェーブに進まない
-        if not is_boss_alive:
-            while (self.current_wave + 1) < len(self.spawn_schedule) and \
-                  elapsed >= self.spawn_schedule[self.current_wave + 1]['start']:
-                self.current_wave += 1
-                self.wave_spawned = 0
-                # 次ウェーブの最初のスポーン時間を now + interval（interval が 0 のときは即時）
-                interval = self.spawn_schedule[self.current_wave]['interval']
-                self.next_spawn_time = now + (interval if interval > 0 else 0)
-        elif is_boss_alive:
-            # ボスがいる場合、次のウェーブの開始時間を現在の時間で更新し続ける（遅延させる）
-            if (self.current_wave + 1) < len(self.spawn_schedule):
-                self.spawn_schedule[self.current_wave + 1]['start'] = elapsed + 100 # 100ms後に再チェック
-
-        # 現在ウェーブの情報
-        wave = self.spawn_schedule[self.current_wave]
-        # 指定数を生成し終えたら、最終ウェーブ以外は待機（次ウェーブ時間で進む）
-        if self.wave_spawned >= wave['count']:
-            # 最後のウェーブに達していて全員生成済みなら spawn を停止
-            if self.current_wave == len(self.spawn_schedule) - 1:
-                self.spawn_active = False
-            return
-        
-        # スポーンタイミングの判定
-        if now >= self.next_spawn_time:
-            # ゲームオーバー時や自機が存在しないときは生成しないがタイマーは進める
-            if self.game_over or len(self.player_group) == 0:
-                # 次の spawn を遅らせる
-                self.next_spawn_time = now + wave['interval']
-                return
-
-            # 同時出現上限（任意）を超えないようにする
-            max_simultaneous = 20
-            if len(self.enemy_group) < max_simultaneous:
-                spawn_type = wave['type']
-                
-                # WaveEnemyは画面の左右から出現させる
-                if spawn_type == 'wave':
-                    x = random.choice([-30, GAME_AREA_WIDTH + 30])
-                    y = random.randint(80, 150)
-                else:
-                    x = random.randint(50, GAME_AREA_WIDTH - 50)
-                    y = 10 # ゲームエリア上端より少し下にスポーン
-
-                if spawn_type == 'normal':
-                    Enemy(self.enemy_group, x, y, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-                elif spawn_type == 'fast':
-                    FastEnemy(self.enemy_group, x, y, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-                elif spawn_type == 'tank':
-                    TankEnemy(self.enemy_group, x, y, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-                elif spawn_type == 'wave':
-                    WaveEnemy(self.enemy_group, x, y, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-                elif spawn_type == 'boss':
-                    BossEnemy(self.enemy_group, GAME_AREA_WIDTH // 2, -80, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-                elif spawn_type == 'grand_boss':
-                    GrandBossEnemy(self.enemy_group, GAME_AREA_WIDTH // 2, -120, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-                else:
-                    # fallback
-                    Enemy(self.enemy_group, x, y, self.player.bullet_group, self.player_group, self.enemy_bullets, self.item_group)
-
-                self.wave_spawned += 1
-
-                 # 次のスポーン時間を設定（interval が 0 の場合は即時に複数生成される）
-            if wave['interval'] > 0:
-                self.next_spawn_time = now + wave['interval']
-            else:
-                # 即時生成の場合、次は現在時刻（ループで続けて生成される）
-                self.next_spawn_time = now
-
     def player_death(self):
         if len(self.player_group) == 0:
             self.game_over = True
             draw_text(self.screen, 'game over', GAME_AREA_WIDTH // 2, screen_height //2 ,75 , RED)
-            self.spawn_active = False # 敵の出現を停止
+            self.stage_manager.spawn_active = False # 敵の出現を停止
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
     def grand_boss_death(self):
@@ -171,11 +76,8 @@ class Game:
             self.game_clear = False
             self.game_over = False
 
-            # 敵の出現タイミングをリセット
-            self.spawn_start_time = pygame.time.get_ticks()
-            self.spawn_active = True
-            self.current_wave = 0
-            self.wave_spawned = 0
+            # ステージマネージャーをリセットしてステージ1から再開
+            self.stage_manager.reset()
             self.grand_boss_defeated = False # フラグをリセット
     
     def scroll_bg(self):
@@ -191,6 +93,11 @@ class Game:
         # ゲームエリアとの境界線
         pygame.draw.line(self.screen, WHITE, (GAME_AREA_WIDTH, 0), (GAME_AREA_WIDTH, screen_height), 1)
 
+        # ステージ表示
+        stage_text = f"STAGE: {self.stage_manager.stage}"
+        stage_surface = self.font_ui.render(stage_text, True, WHITE)
+        self.screen.blit(stage_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - stage_surface.get_width()) // 2, 20))
+
         # スコア表示
         score_title_surface = self.font_ui.render("SCORE", True, SCORE_TEXT_COLOR)
         self.screen.blit(score_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_title_surface.get_width()) // 2, 50))
@@ -198,9 +105,10 @@ class Game:
         self.screen.blit(score_value_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_value_surface.get_width()) // 2, 90))
 
         # ライフ表示 (既存のものを移動)
-        lives_text = f"LIVES: {self.player.health}"
-        lives_surface = self.font_ui.render(lives_text, True, WHITE)
-        self.screen.blit(lives_surface, (GAME_AREA_WIDTH + 20, screen_height - 40))
+        if len(self.player_group) > 0:
+            lives_text = f"LIVES: {self.player.health}"
+            lives_surface = self.font_ui.render(lives_text, True, WHITE)
+            self.screen.blit(lives_surface, (GAME_AREA_WIDTH + 20, screen_height - 40))
 
         # パワーレベル表示
         if len(self.player_group) > 0:
@@ -268,9 +176,14 @@ class Game:
 
     def run(self):
         self.scroll_bg()
-
-        self.create_enemy()
-
+        
+        # ステージ管理と敵生成
+        result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
+        if result == "game_clear":
+            self.game_clear = True
+        elif isinstance(result, int): # ステージ移行
+            self.bg_img = self.bg_images[result - 1]
+        
         #グループの描画と更新
         self.player_group.draw(self.screen)
         self.player_group.update()
@@ -308,6 +221,10 @@ class Game:
         
         # UI（スコア、ライフなど）を描画
         self.draw_ui()
+
+        # ステージクリア時のメッセージ表示
+        if self.stage_manager.stage_clear_timer > 0 and not self.game_clear:
+            draw_text(self.screen, f'STAGE {self.stage_manager.stage} CLEAR', GAME_AREA_WIDTH // 2, screen_height // 2, 75, GREEN)
 
         # ゲームクリアの判定と描画
         self.grand_boss_death()
