@@ -70,14 +70,7 @@ class BossEnemy(Enemy):
         if self.rect.y < target_y:
             self.pos.y += self.speed
         else:
-            # レーヴァテイン薙ぎ払い後の特殊移動
-            if self.is_laevateinn_moving:
-                self.pos.x += 3.0 * self.laevateinn_move_dir # 少し速めに移動
-                if not (self.rect.width / 2 < self.pos.x < GAME_AREA_WIDTH - self.rect.width / 2):
-                    self.laevateinn_move_dir *= -1
-                self.rect.center = self.pos
-                return
-            # 水平往復
+            # 通常の水平往復移動
             self.pos.x += math.sin(pygame.time.get_ticks() * 0.001) * 2
 
             # 画面内に制限

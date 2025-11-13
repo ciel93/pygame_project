@@ -82,6 +82,10 @@ class StageManager:
                 self.wave_spawned = 0
                 interval = self.spawn_schedule[self.current_wave]['interval']
                 self.next_spawn_time = now + (interval if interval > 0 else 0)
+        elif is_boss_alive:
+            # ボス戦中は次のウェーブの開始時間を遅延させる
+            if (self.current_wave + 1) < len(self.spawn_schedule):
+                self.spawn_schedule[self.current_wave + 1]['start'] = elapsed + 100
 
         wave = self.spawn_schedule[self.current_wave]
         if self.wave_spawned >= wave['count']:
