@@ -81,8 +81,15 @@ class HomingBullet(Bullet):
 
         if self.target and self.target.alive:
             # ターゲットへの方向ベクトルを計算し、滑らかに追尾
-            target_direction = (pygame.math.Vector2(self.target.rect.center) - self.pos).normalize()
-            self.direction = self.direction.slerp(target_direction, self.turn_speed * 0.02)
+            if (self.target.rect.center - self.pos).length_squared() > 0:
+                target_direction = (pygame.math.Vector2(self.target.rect.center) - self.pos).normalize()
+                
+                # 2つのベクトルがほぼ180度反対向きの場合、slerpは未定義になるためエラーを回避
+                if self.direction.dot(target_direction) < -0.99:
+                    # 代わりに線形補間(lerp)を使用して方向を少しだけ変える
+                    self.direction = self.direction.lerp(target_direction, self.turn_speed * 0.02)
+                else:
+                    self.direction = self.direction.slerp(target_direction, self.turn_speed * 0.02)
         
         self.pos += self.direction * self.speed
         self.rect.center = self.pos

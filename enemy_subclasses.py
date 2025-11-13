@@ -236,3 +236,21 @@ class WaveEnemy(Enemy):
         self.rect.centery = self.pos.y + math.sin(self.angle) * self.amplitude
         self.angle += 0.1
         self.rect.centerx = self.pos.x
+
+    def create_random_fire(self):
+        """一定間隔で真下に弾を発射する"""
+        if self.player_group is None:
+            return
+        
+        self.fire_timer += 1
+        # 60フレーム（1秒）ごとに発射
+        if self.fire_timer > 60:
+            self.fire_timer = 0
+            # 真下に弾を発射
+            EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=3.0)
+
+    def update(self):
+        self.move()
+        self.create_random_fire()
+        # 親クラスの移動以外の処理（当たり判定、死亡処理など）を呼び出す
+        super().update(move_override=True)
