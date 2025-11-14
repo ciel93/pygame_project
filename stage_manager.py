@@ -75,29 +75,36 @@ class StageManager:
         elapsed = now - self.spawn_start_time
         is_boss_alive = any(isinstance(enemy, BossEnemy) for enemy in self.enemy_group)
 
-        # ウェーブ進行
+        # 時間経過によるウェーブ進行の判定（ボスがいない場合のみ）
         if not is_boss_alive:
+            # 次のウェーブが存在し、かつ開始時刻を過ぎていたら
             if (self.current_wave + 1) < len(self.spawn_schedule) and \
-                  elapsed >= self.spawn_schedule[self.current_wave + 1]['start']:
+               elapsed >= self.spawn_schedule[self.current_wave + 1]['start']:
                 self.current_wave += 1
                 self.wave_spawned = 0
-                interval = self.spawn_schedule[self.current_wave]['interval']
-                self.next_spawn_time = now + (interval if interval > 0 else 0)
-        elif is_boss_alive:
-            # ボス戦中は次のウェーブの開始時間を遅延させる
-            if (self.current_wave + 1) < len(self.spawn_schedule):
-                self.spawn_schedule[self.current_wave + 1]['start'] = elapsed + 100
+                self.next_spawn_time = now
 
         wave = self.spawn_schedule[self.current_wave]
+        
+        # 現在のウェーブの敵をすべて生成し終えたか
         if self.wave_spawned >= wave['count']:
-            # ボスが出現するウェーブで、ボスがまだ生きている場合は、ここで処理を中断して待機
-            if 'boss' in wave['type'] and is_boss_alive:
-                return None
-            if self.current_wave == len(self.spawn_schedule) - 1 and len(self.enemy_group) == 0:
-                self.spawn_active = False
-                if not grand_boss_defeated:
+            # 現在のウェーブがボスウェーブで、そのボスが倒された場合
+            if 'boss' in wave['type'] and not is_boss_alive:
+                # これがステージの最終ウェーブの場合
+                if self.current_wave == len(self.spawn_schedule) - 1:
+                    self.spawn_active = False
+                    # ステージクリアタイマーを開始
                     self.stage_clear_timer = pygame.time.get_ticks()
-            return None
+                    return None # 待機状態に入る
+                # まだ次のウェーブがある場合
+                else:
+                    # 即座に次のウェーブへ移行
+                    self.current_wave += 1
+                    self.wave_spawned = 0
+                    next_wave = self.spawn_schedule[self.current_wave]
+                    self.spawn_start_time = pygame.time.get_ticks() - next_wave['start'] # 経過時間をリセット
+                    self.next_spawn_time = now
+            return None # 通常のウェーブ完了後、またはボス生存中は次のウェーブ開始時刻まで待機
 
         # 敵の生成
         if now >= self.next_spawn_time:

@@ -171,7 +171,7 @@ class Player(pygame.sprite.Sprite):
         if not self.invincible:
             # check_rectと衝突する可能性のある敵のみをリストアップ
             nearby_enemies = [e for e in self.enemy_group if e.rect.colliderect(check_rect)]
-            for enemy in nearby_enemies:
+            for enemy in nearby_enemies: # 敵本体との当たり判定
                 if self.rect.colliderect(enemy.rect):
                     # ボス以外の敵と衝突した場合
                     if not isinstance(enemy, BossEnemy):
@@ -182,7 +182,7 @@ class Player(pygame.sprite.Sprite):
             # 共有の敵弾グループとの円形当たり判定
             if self.enemy_bullets is not None:
                 # 同様に、check_rectと衝突する可能性のある敵弾のみをリストアップ
-                nearby_bullets = [b for b in self.enemy_bullets if b.rect.colliderect(check_rect)]
+                nearby_bullets = [b for b in self.enemy_bullets if b.rect.colliderect(check_rect)] # 敵弾との当たり判定
                 for bullet in nearby_bullets:
                     bullet_pos = pygame.math.Vector2(bullet.rect.center)
                     if self.pos.distance_to(bullet_pos) < self.radius + getattr(bullet, 'radius', 4):
@@ -199,16 +199,6 @@ class Player(pygame.sprite.Sprite):
         self.invincible_timer = pygame.time.get_ticks()
         if self.health <= 0:
             self.alive = False
-
-    def collision_item(self):
-        """アイテムとの当たり判定と取得処理"""
-        if self.item_group is not None:
-            for item in self.item_group:
-                if self.rect.colliderect(item.rect):
-                    if item.item_type == 'power':
-                        if self.power_level < self.max_power:
-                            self.power_level += 1
-                    item.kill() # アイテムを消去
 
     def attract_items(self):
         """画面上部でアイテムを吸い込む"""
@@ -244,8 +234,7 @@ class Player(pygame.sprite.Sprite):
         self.move()
         self.cooldown_bullet()
         self.fire_homing_bullets()
-        self.collision_enemy()
-        self.collision_item()
+        self.collision_enemy() # 敵との衝突判定は残す
         self.attract_items()
         self.update_invincibility()
         self.check_death()

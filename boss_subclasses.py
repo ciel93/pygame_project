@@ -54,7 +54,7 @@ class GrandBossEnemy(BossEnemy):
         # HPが半分以下になったら発狂モードに移行
         if not self.enrage_mode and self.health <= self.max_health / 2:
             self.enrage_mode = True
-            self.pattern_change_time = 120 # パターン切替をさらに高速化
+            self.pattern_change_time = 160 # パターン切替を少し高速化（120から変更）
 
         self.pattern_timer += 1
         if self.pattern_timer > self.pattern_change_time:

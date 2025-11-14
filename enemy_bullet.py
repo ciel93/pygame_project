@@ -80,15 +80,10 @@ class EnemyBullet(pygame.sprite.Sprite):
 
             # 円形当たり判定
             if self.pos.distance_to(target_center) < (self.radius + target_radius):
-                if hasattr(target, 'health'):
-                    try:
-                        target.health -= 1
-                    except Exception:
-                        pass
-                    if getattr(target, 'health', 0) <= 0:
-                        target.kill()
-                else:
-                    target.kill()
+                # ターゲットに take_damage メソッドがあればそれを呼び出す
+                # 無敵状態でない場合のみダメージを与える
+                if hasattr(target, 'take_damage') and (not hasattr(target, 'invincible') or not target.invincible):
+                    target.take_damage()
                 self.kill()
                 break
 

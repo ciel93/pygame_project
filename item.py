@@ -18,6 +18,16 @@ class Item(pygame.sprite.Sprite):
                 self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
                 pygame.draw.circle(self.image, (255, 100, 100), (12, 12), 12)
                 pygame.draw.rect(self.image, WHITE, (8, 4, 8, 16)) # 'P'のような形
+        elif self.item_type == 'score':
+            try:
+                self.image = pygame.image.load('assets/img/item/score.png').convert_alpha()
+            except Exception:
+                self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
+                pygame.draw.circle(self.image, (255, 215, 0), (12, 12), 12) # 金色
+                # ドルマーク'$'のような形を描画
+                font = pygame.font.SysFont('arial', 20, bold=True)
+                text = font.render('S', True, BLACK)
+                self.image.blit(text, (self.image.get_width() // 2 - text.get_width() // 2, self.image.get_height() // 2 - text.get_height() // 2))
         else:
             # 'power' 以外のアイテムタイプの場合のフォールバック
             self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
@@ -31,6 +41,7 @@ class Item(pygame.sprite.Sprite):
         # 位置を浮動小数点で管理
         self.pos = pygame.math.Vector2(self.rect.center)
         # アイテム吸い込み用のフラグと速度
+        self.value = 500 if item_type == 'score' else 0 # スコアアイテムの価値
         self.is_attracted = False
         self.attraction_speed = 8
 

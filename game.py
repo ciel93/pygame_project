@@ -182,11 +182,12 @@ class Game:
         for enemy in self.enemy_group:
             # BossEnemy またはそのサブクラス（GrandBossEnemy）が対象
             if isinstance(enemy, BossEnemy) and getattr(enemy, 'just_defeated', False):
-                score_per_bullet = 100  # 弾1つあたりのスコア
                 # 大ボスが倒されたことを記録
                 if isinstance(enemy, GrandBossEnemy):
                     self.grand_boss_defeated = True
+                score_per_bullet = 100  # 弾1つあたりのスコア
                 bullet_count = len(self.enemy_bullets)
+
                 self.score += bullet_count * score_per_bullet
                 self.enemy_bullets.empty()  # 全ての敵弾を消去
 
@@ -194,13 +195,13 @@ class Game:
 
     def run(self, clock):
         self.scroll_bg()
-        
+
         # ステージ管理と敵生成
         result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
         if result == "game_clear":
             self.game_clear = True
         elif isinstance(result, int): # ステージ移行
-            self.bg_img = self.bg_images[result - 1]
+             self.bg_img = self.bg_images[result - 1]
         
         #グループの描画と更新
         self.player_group.draw(self.screen)
@@ -233,6 +234,9 @@ class Game:
         # アイテムの更新と描画（プレイヤーが生きている場合、位置を渡す）
         if len(self.player_group) > 0:
             self.item_group.update(self.player.pos)
+            
+            # アイテム取得処理
+            self.check_item_collision()
         else:
             self.item_group.update()
         self.item_group.draw(self.screen)
@@ -253,3 +257,15 @@ class Game:
         # ゲームオーバーの判定と描画、およびリセット処理
         self.player_death()
         self.reset()
+
+    def check_item_collision(self):
+        """プレイヤーとアイテムの衝突をチェックし、効果を適用する"""
+        if self.player:
+            # spritecollideは衝突したスプライトのリストを返す。第三引数Trueでアイテムは自動で消える。
+            collided_items = pygame.sprite.spritecollide(self.player, self.item_group, True)
+            for item in collided_items:
+                if item.item_type == 'power':
+                    if self.player.power_level < self.player.max_power:
+                        self.player.power_level += 1
+                elif item.item_type == 'score':
+                    self.score += item.value
