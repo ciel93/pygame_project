@@ -119,7 +119,13 @@ class Game:
         if len(self.player_group) > 0:
             lives_text = f"LIVES: {self.player.health}"
             lives_surface = self.font_ui.render(lives_text, True, WHITE)
-            self.screen.blit(lives_surface, (GAME_AREA_WIDTH + 20, screen_height - 40))
+            self.screen.blit(lives_surface, (GAME_AREA_WIDTH + 20, screen_height - 50))
+
+        # ボム表示
+        if len(self.player_group) > 0:
+            bomb_text = f"BOMB: {self.player.bombs}"
+            bomb_surface = self.font_ui.render(bomb_text, True, WHITE)
+            self.screen.blit(bomb_surface, (GAME_AREA_WIDTH + 20, screen_height - 80))
 
         # パワーレベル表示
         if len(self.player_group) > 0:
@@ -207,6 +213,11 @@ class Game:
         self.player_group.draw(self.screen)
         self.player_group.update()
 
+        # ボムの描画と更新
+        if self.player:
+            self.player.bomb_group.update()
+            self.player.bomb_group.draw(self.screen)
+
         # プレイヤーの弾を描画・更新
         if self.player:
             self.player.bullet_group.draw(self.screen)
@@ -230,6 +241,10 @@ class Game:
         # 共有の敵弾を更新・描画（Enemy を destroy しても弾は残る）
         self.enemy_bullets.update()
         self.enemy_bullets.draw(self.screen)
+
+        # ボム発動中は敵弾を消去
+        if self.player and self.player.bomb_active:
+            self.enemy_bullets.empty()
 
         # アイテムの更新と描画（プレイヤーが生きている場合、位置を渡す）
         if len(self.player_group) > 0:
@@ -267,5 +282,8 @@ class Game:
                 if item.item_type == 'power':
                     if self.player.power_level < self.player.max_power:
                         self.player.power_level += 1
+                elif item.item_type == 'bomb':
+                    if self.player.bombs < self.player.max_bombs:
+                        self.player.bombs += 1
                 elif item.item_type == 'score':
                     self.score += item.value

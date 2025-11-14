@@ -2,6 +2,7 @@ import pygame
 from setting import *
 from bullet import Bullet, HomingBullet
 from boss import BossEnemy
+from bomb import MasterSpark
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, groups, x, y, enemy_group, enemy_bullets_group=None, item_group=None):
@@ -11,6 +12,7 @@ class Player(pygame.sprite.Sprite):
 
         #グループ
         self.bullet_group = pygame.sprite.Group()
+        self.bomb_group = pygame.sprite.GroupSingle()
         self.item_group = item_group
         self.enemy_group = enemy_group
         # 共有の敵弾グループ（Game で作成したグループを受け取る）
@@ -51,6 +53,13 @@ class Player(pygame.sprite.Sprite):
         #体力
         self.health = 3
         self.alive = True
+
+        # ボム関連
+        self.bombs = 3
+        self.max_bombs = 8
+        self.bomb_active = False
+        self.bomb_cooldown = 30 # ボム使用後の短いクールダウン
+        self.bomb_timer = 0
 
         # 無敵時間
         self.invincible = False
@@ -115,12 +124,28 @@ class Player(pygame.sprite.Sprite):
 
             self.fire = True
 
+        # ボムの発動
+        if key[pygame.K_x] and not self.bomb_active and self.bombs > 0 and self.bomb_timer == 0:
+            self.activate_bomb()
+
+    def activate_bomb(self):
+        self.bombs -= 1
+        self.bomb_active = True
+        self.bomb_timer = self.bomb_cooldown
+        MasterSpark(self.bomb_group, self)
+
     def cooldown_bullet(self):
         if self.fire:
             self.timer += 1
         if self.timer > 10:
             self.fire = False
             self.timer = 0
+
+    def cooldown_bomb(self):
+        if self.bomb_timer > 0:
+            self.bomb_timer -= 1
+        if self.bomb_active and len(self.bomb_group) == 0:
+            self.bomb_active = False
 
     def fire_homing_bullets(self):
         """ホーミング弾を専用のクールダウンで発射する"""
@@ -168,7 +193,7 @@ class Player(pygame.sprite.Sprite):
         check_rect.center = self.rect.center
 
         #敵本体との当たり判定
-        if not self.invincible:
+        if not self.invincible and not self.bomb_active:
             # check_rectと衝突する可能性のある敵のみをリストアップ
             nearby_enemies = [e for e in self.enemy_group if e.rect.colliderect(check_rect)]
             for enemy in nearby_enemies: # 敵本体との当たり判定
@@ -190,9 +215,9 @@ class Player(pygame.sprite.Sprite):
                         bullet.kill()
                         break # 複数の弾と同時に当たらないようにループを抜ける
 
-    def take_damage(self):
+    def take_damage(self, damage_amount=1):
         """ダメージを受けて無敵状態を開始する"""
-        self.health -= 1
+        self.health -= damage_amount
         # パワーレベルを1に戻す
         self.power_level = 1
         self.invincible = True
@@ -233,6 +258,7 @@ class Player(pygame.sprite.Sprite):
         self.input()
         self.move()
         self.cooldown_bullet()
+        self.cooldown_bomb()
         self.fire_homing_bullets()
         self.collision_enemy() # 敵との衝突判定は残す
         self.attract_items()

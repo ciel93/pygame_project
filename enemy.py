@@ -97,20 +97,34 @@ class Enemy(pygame.sprite.Sprite):
                 self.alive = False
 
     def check_death(self):
-        if self.alive == False and self.explosion == False:
+        if not self.alive and not self.explosion:
             self.speed = 0
             self.image.set_alpha(0)
             # アイテムドロップ判定
             if self.item_group is not None:
-                # 40%の確率でアイテムをドロップ、その中で50%の確率でスコアアイテム
-                if random.random() < 0.40:
-                    item_type = 'score' if random.random() < 0.5 else 'power'
+                drop_chance = random.random()
+                if drop_chance < 0.05: # 5%の確率でボム
+                    item_type = 'bomb'
+                elif drop_chance < 0.25: # 20%の確率でスコア (5%～25%)
+                    item_type = 'score'
+                elif drop_chance < 0.40: # 15%の確率でパワー (25%～40%)
+                    item_type = 'power'
+                else:
+                    item_type = None
+                if item_type:
                     Item(self.item_group, self.rect.center, item_type)
             explosion = Explosion(self.explosion_group, self.rect.centerx, self.rect.centery)
             self.explosion = True
         elif self.explosion == True:
             self.kill()
     
+    def take_damage(self, damage_amount=1):
+        """弾やボムからダメージを受ける"""
+        self.health -= damage_amount
+        if self.health <= 0 and self.alive:
+            self.should_award_score = True
+            self.alive = False
+
     def update(self, move_override=False):
         if not move_override:
             self.move()

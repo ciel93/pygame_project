@@ -65,7 +65,11 @@ class StageManager:
         # ステージクリア待機中
         if self.stage_clear_timer > 0:
             if pygame.time.get_ticks() - self.stage_clear_timer > self.stage_clear_wait_time:
-                return self.start_stage(self.stage + 1)
+                # 最終ボスが倒され、かつ現在のステージが最後のステージであればゲームクリアを通知
+                if grand_boss_defeated and self.stage == len(self.stage_schedules):
+                    self.spawn_active = False # 敵の出現を停止
+                    return "game_clear" # ゲームクリアをGameクラスに通知
+                return self.start_stage(self.stage + 1) # 次のステージへ移行
             return None
 
         if not self.spawn_active:
@@ -74,6 +78,11 @@ class StageManager:
         now = pygame.time.get_ticks()
         elapsed = now - self.spawn_start_time
         is_boss_alive = any(isinstance(enemy, BossEnemy) for enemy in self.enemy_group)
+
+        # ボス戦中は後続ウェーブの開始時間を現在時刻で更新し続け、進行を止める
+        if is_boss_alive:
+            if (self.current_wave + 1) < len(self.spawn_schedule):
+                self.spawn_schedule[self.current_wave + 1]['start'] = elapsed + 100 # 100ms先に設定し続ける
 
         # 時間経過によるウェーブ進行の判定（ボスがいない場合のみ）
         if not is_boss_alive:

@@ -83,7 +83,7 @@ class EnemyBullet(pygame.sprite.Sprite):
                 # ターゲットに take_damage メソッドがあればそれを呼び出す
                 # 無敵状態でない場合のみダメージを与える
                 if hasattr(target, 'take_damage') and (not hasattr(target, 'invincible') or not target.invincible):
-                    target.take_damage()
+                    target.take_damage(1) # 1ダメージを与える
                 self.kill()
                 break
 

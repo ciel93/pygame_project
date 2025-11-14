@@ -28,6 +28,16 @@ class Item(pygame.sprite.Sprite):
                 font = pygame.font.SysFont('arial', 20, bold=True)
                 text = font.render('S', True, BLACK)
                 self.image.blit(text, (self.image.get_width() // 2 - text.get_width() // 2, self.image.get_height() // 2 - text.get_height() // 2))
+        elif self.item_type == 'bomb':
+            try:
+                self.image = pygame.image.load('assets/img/item/bomb.png').convert_alpha()
+            except Exception:
+                self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
+                pygame.draw.circle(self.image, (100, 200, 255), (12, 12), 12) # 水色
+                # 'B'の文字を描画
+                font = pygame.font.SysFont('arial', 20, bold=True)
+                text = font.render('B', True, BLACK)
+                self.image.blit(text, (self.image.get_width() // 2 - text.get_width() // 2, self.image.get_height() // 2 - text.get_height() // 2))
         else:
             # 'power' 以外のアイテムタイプの場合のフォールバック
             self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
