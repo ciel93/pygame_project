@@ -254,3 +254,52 @@ class WaveEnemy(Enemy):
         self.create_random_fire()
         # 親クラスの移動以外の処理（当たり判定、死亡処理など）を呼び出す
         super().update(move_override=True)
+
+class HunterEnemy(Enemy):
+    """プレイヤーを追いかけ、狙い撃ちしてくる強化された敵"""
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+        self.speed = 2.0       # 追尾速度
+        self.health = 4        # 少し高めのHP
+        self.score_value = 40  # HunterEnemyのスコア
+
+        try:
+            pre = pygame.image.load('assets/img/enemy/hunter.png') # 新しい画像
+            self.image = pygame.transform.scale(pre, (55, 55))
+        except Exception:
+            surf = pygame.Surface((55, 55), pygame.SRCALPHA)
+            surf.fill((200, 100, 200)) # 紫がかった色
+            self.image = surf
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+        self.pos = pygame.math.Vector2(self.rect.center)
+        
+        self.fire_cooldown = 120 # 弾の発射間隔 (フレーム)
+        self.fire_timer = random.randint(0, self.fire_cooldown) # タイマーをランダムに初期化
+
+    def move(self):
+        """プレイヤーを追尾する動き"""
+        if self.player_group and len(self.player_group) > 0:
+            player = self.player_group.sprite
+            direction = player.pos - self.pos
+            if direction.length() > 0:
+                direction.normalize_ip()
+            self.pos += direction * self.speed
+            self.rect.center = self.pos
+
+    def create_random_fire(self):
+        """一定間隔でプレイヤーを狙って弾を発射する"""
+        if self.player_group and len(self.player_group) > 0:
+            self.fire_timer += 1
+            if self.fire_timer >= self.fire_cooldown:
+                self.fire_timer = 0
+                player = self.player_group.sprite
+                direction = player.pos - self.pos
+                if direction.length_squared() > 0:
+                    direction.normalize_ip()
+                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=3.5, direction=direction)
+
+    def update(self):
+        self.move()
+        self.create_random_fire()
+        super().update(move_override=True)

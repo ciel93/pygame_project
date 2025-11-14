@@ -97,23 +97,23 @@ class Game:
         self.screen.blit(self.bg_img, (0, self.bg_y - bg_height))
         self.screen.blit(self.bg_img, (0, self.bg_y))
 
-    def draw_ui(self):
+    def draw_ui(self, clock):
         """ゲームエリア右側のスコア表示画面を描画する"""
         # スコアパネルの背景
         pygame.draw.rect(self.screen, BLACK, (GAME_AREA_WIDTH, 0, SCORE_PANEL_WIDTH, screen_height))
         # ゲームエリアとの境界線
-        pygame.draw.line(self.screen, WHITE, (GAME_AREA_WIDTH, 0), (GAME_AREA_WIDTH, screen_height), 1)
+        pygame.draw.line(self.screen, WHITE, (GAME_AREA_WIDTH, 0), (GAME_AREA_WIDTH, screen_height), 2)
 
         # ステージ表示
         stage_text = f"STAGE: {self.stage_manager.stage}"
         stage_surface = self.font_ui.render(stage_text, True, WHITE)
-        self.screen.blit(stage_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - stage_surface.get_width()) // 2, 20))
+        self.screen.blit(stage_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - stage_surface.get_width()) // 2, 50))
 
         # スコア表示
-        score_title_surface = self.font_ui.render("SCORE", True, SCORE_TEXT_COLOR)
-        self.screen.blit(score_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_title_surface.get_width()) // 2, 50))
+        score_title_surface = self.font_ui.render("SCORE", True, WHITE)
+        self.screen.blit(score_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_title_surface.get_width()) // 2, 90))
         score_value_surface = self.font_ui.render(f"{self.score:07d}", True, SCORE_TEXT_COLOR) # 7桁表示
-        self.screen.blit(score_value_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_value_surface.get_width()) // 2, 90))
+        self.screen.blit(score_value_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_value_surface.get_width()) // 2, 125))
 
         # ライフ表示 (既存のものを移動)
         if len(self.player_group) > 0:
@@ -123,11 +123,18 @@ class Game:
 
         # パワーレベル表示
         if len(self.player_group) > 0:
-            power_title_surface = self.font_ui.render("POWER", True, WHITE)
-            self.screen.blit(power_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_title_surface.get_width()) // 2, 130))
+            power_title_surface = self.font_ui.render("POWER", True, SCORE_TEXT_COLOR)
+            self.screen.blit(power_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_title_surface.get_width()) // 2, 165))
             power_level_text = f"{self.player.power_level} / {self.player.max_power}"
             power_level_surface = self.font_ui.render(power_level_text, True, WHITE)
-            self.screen.blit(power_level_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_level_surface.get_width()) // 2, 160))
+            self.screen.blit(power_level_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_level_surface.get_width()) // 2, 200))
+
+        # FPS表示
+        fps = clock.get_fps()
+        fps_text = f"FPS: {fps:.2f}"
+        fps_surface = self.font_ui.render(fps_text, True, WHITE)
+        # UIパネルの上部に中央揃えで表示
+        self.screen.blit(fps_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - fps_surface.get_width()) // 2, 20))
 
     def check_score_award(self):
         """敵が倒されたかチェックし、スコアを加算する"""
@@ -185,7 +192,7 @@ class Game:
 
                 enemy.just_defeated = False # フラグをリセットして二重処理を防ぐ
 
-    def run(self):
+    def run(self, clock):
         self.scroll_bg()
         
         # ステージ管理と敵生成
@@ -231,7 +238,7 @@ class Game:
         self.item_group.draw(self.screen)
         
         # UI（スコア、ライフなど）を描画
-        self.draw_ui()
+        self.draw_ui(clock)
 
         # ステージクリア時のメッセージ表示
         if self.stage_manager.stage_clear_timer > 0 and not self.game_clear:

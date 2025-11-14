@@ -24,13 +24,7 @@ while run:
     screen.fill(BLACK)
 
     #ゲームの実行
-    game.run()
-
-    # FPSを画面右上に表示
-    fps = clock.get_fps()
-    fps_text = f"FPS: {fps:.2f}"
-    fps_surface = font.render(fps_text, True, WHITE)
-    screen.blit(fps_surface, (screen_width - fps_surface.get_width() - 10, 10))
+    game.run(clock)
 
     #イベントの取得
     for event in pygame.event.get():

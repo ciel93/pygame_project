@@ -193,6 +193,8 @@ class Player(pygame.sprite.Sprite):
     def take_damage(self):
         """ダメージを受けて無敵状態を開始する"""
         self.health -= 1
+        # パワーレベルを1に戻す
+        self.power_level = 1
         self.invincible = True
         self.invincible_timer = pygame.time.get_ticks()
         if self.health <= 0:

@@ -2,7 +2,7 @@ import pygame
 import random
 from setting import *
 from enemy import Enemy
-from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy
+from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy
 from boss import BossEnemy
 from boss_subclasses import GrandBossEnemy, Stage1Boss
 
@@ -26,10 +26,11 @@ class StageManager:
             ],
             2: [ # ステージ2
                 {'start': 0,      'type': 'normal', 'count': 15, 'interval': 400},
-                {'start': 8000,   'type': 'fast',   'count': 8,  'interval': 400},
-                {'start': 15000,  'type': 'tank',   'count': 8,  'interval': 800},
-                {'start': 23000,  'type': 'wave',   'count': 10, 'interval': 600},
-                {'start': 32000,  'type': 'grand_boss', 'count': 1, 'interval': 0},
+                {'start': 7000,   'type': 'fast',   'count': 8,  'interval': 400},
+                {'start': 13000,  'type': 'hunter', 'count': 6,  'interval': 1200}, # 新しい敵を追加
+                {'start': 20000,  'type': 'tank',   'count': 8,  'interval': 800},
+                {'start': 28000,  'type': 'wave',   'count': 10, 'interval': 600},
+                {'start': 36000,  'type': 'grand_boss', 'count': 1, 'interval': 0},
             ]
         }
         self.stage = 1
@@ -132,6 +133,7 @@ class StageManager:
             'fast': FastEnemy,
             'tank': TankEnemy,
             'wave': WaveEnemy,
+            'hunter': HunterEnemy, # マップに追加
             'boss': BossEnemy,
             'stage1_boss': Stage1Boss,
             'grand_boss': GrandBossEnemy
