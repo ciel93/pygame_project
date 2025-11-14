@@ -162,7 +162,7 @@ class Game:
 
         # 背景バー (非常に暗い灰色)
         bg_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
-        pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
+        pygame.draw.rect(self.screen, BOSS_HP_BAR_BG_COLOR, bg_rect)
 
         # 前景HPバー
         fg_width = bar_width * hp_ratio
@@ -170,11 +170,11 @@ class Game:
         
         # HP残量に応じて色を変える (より鮮やかな色)
         if hp_ratio < 0.2:
-            color = (255, 50, 50)  # 非常に低いHPで鮮やかな赤
+            color = BOSS_HP_LOW_COLOR
         elif hp_ratio < 0.5:
-            color = (255, 200, 0)  # 中程度のHPで鮮やかなオレンジ
+            color = BOSS_HP_MID_COLOR
         else:
-            color = (50, 255, 50)  # 高いHPで鮮やかな緑
+            color = BOSS_HP_HIGH_COLOR
         pygame.draw.rect(self.screen, color, fg_rect)
 
         # 枠線 (太くする)

@@ -93,7 +93,7 @@ class Stage1Boss(BossEnemy):
         except Exception:
             # 画像がない場合のフォールバック
             surf = pygame.Surface((100, 100), pygame.SRCALPHA)
-            surf.fill((100, 100, 255)) # 青みがかった色
+            surf.fill(STAGE1_BOSS_COLOR) # 青みがかった色
             self.image = surf
         self.rect = self.image.get_rect(center=self.rect.center)
         self.radius = self.rect.width / 2 * 0.9

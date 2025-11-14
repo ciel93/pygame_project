@@ -70,12 +70,10 @@ class MasterSpark(pygame.sprite.Sprite):
         else:
             outer_width = self.rect.width * current_width_ratio
             inner_width = outer_width * 0.5
-            outer_color = (255, 255, 100, 100)
-            inner_color = (255, 255, 255, 200)
             # 外側のレーザー
-            pygame.draw.rect(self.image, outer_color, (self.rect.width/2 - outer_width/2, 0, outer_width, self.rect.height))
+            pygame.draw.rect(self.image, BOMB_LASER_OUTER_COLOR, (self.rect.width/2 - outer_width/2, 0, outer_width, self.rect.height))
             # 内側のレーザー
-            pygame.draw.rect(self.image, inner_color, (self.rect.width/2 - inner_width/2, 0, inner_width, self.rect.height))
+            pygame.draw.rect(self.image, BOMB_LASER_INNER_COLOR, (self.rect.width/2 - inner_width/2, 0, inner_width, self.rect.height))
 
         # 毎フレームマスクを更新
         self.mask = pygame.mask.from_surface(self.image)

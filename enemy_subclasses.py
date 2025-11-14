@@ -268,7 +268,7 @@ class HunterEnemy(Enemy):
             self.image = pygame.transform.scale(pre, (55, 55))
         except Exception:
             surf = pygame.Surface((55, 55), pygame.SRCALPHA)
-            surf.fill((200, 100, 200)) # 紫がかった色
+            surf.fill(HUNTER_ENEMY_COLOR) # 紫がかった色
             self.image = surf
         self.rect = self.image.get_rect(center=self.rect.center)
 

@@ -16,14 +16,14 @@ class Item(pygame.sprite.Sprite):
             except Exception: # pygame.error だけでなく FileNotFoundError なども捕捉
                 # なければ図形で代替
                 self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
-                pygame.draw.circle(self.image, (255, 100, 100), (12, 12), 12)
+                pygame.draw.circle(self.image, ITEM_POWER_COLOR, (12, 12), 12)
                 pygame.draw.rect(self.image, WHITE, (8, 4, 8, 16)) # 'P'のような形
         elif self.item_type == 'score':
             try:
                 self.image = pygame.image.load('assets/img/item/score.png').convert_alpha()
             except Exception:
                 self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
-                pygame.draw.circle(self.image, (255, 215, 0), (12, 12), 12) # 金色
+                pygame.draw.circle(self.image, ITEM_SCORE_COLOR, (12, 12), 12) # 金色
                 # ドルマーク'$'のような形を描画
                 font = pygame.font.SysFont('arial', 20, bold=True)
                 text = font.render('S', True, BLACK)
@@ -33,7 +33,7 @@ class Item(pygame.sprite.Sprite):
                 self.image = pygame.image.load('assets/img/item/bomb.png').convert_alpha()
             except Exception:
                 self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
-                pygame.draw.circle(self.image, (100, 200, 255), (12, 12), 12) # 水色
+                pygame.draw.circle(self.image, ITEM_BOMB_COLOR, (12, 12), 12) # 水色
                 # 'B'の文字を描画
                 font = pygame.font.SysFont('arial', 20, bold=True)
                 text = font.render('B', True, BLACK)
@@ -41,7 +41,7 @@ class Item(pygame.sprite.Sprite):
         else:
             # 'power' 以外のアイテムタイプの場合のフォールバック
             self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (100, 100, 255), (12, 12), 12) # 別の色で表示
+            pygame.draw.circle(self.image, ITEM_DEFAULT_COLOR, (12, 12), 12) # 別の色で表示
             pygame.draw.rect(self.image, WHITE, (8, 8, 8, 8)) # 'S'のような形
 
         self.image = pygame.transform.scale(self.image, (24, 24))
