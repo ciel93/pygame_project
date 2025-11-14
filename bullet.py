@@ -102,12 +102,11 @@ class HomingBullet(Bullet):
         # 親クラスのアニメーションを呼び出して、self.image を更新
         self.animation()
 
-        # 進行方向ベクトルから角度を計算
-        # self.direction は (0, -1) が上（0度）なので、そこからの角度を計算
-        # Pygameのrotateは反時計回りが正なので、-1を掛けて向きを合わせる
+        # 進行方向ベクトルから角度を計算 (上方向が0度)
         angle = -self.direction.angle_to(pygame.math.Vector2(0, -1))
 
-        # 毎フレームリサイズするのではなく、アニメーションで更新されたself.imageを直接回転させる
-        # これにより transform.scale の負荷が減る
-        self.image = pygame.transform.rotate(self.image, angle)
+        # 毎回、画質が劣化していないアニメーション用の元画像(self.pre_image)を
+        # スケールしてから回転させることで、画質の劣化を防ぐ
+        scaled_image = pygame.transform.scale(self.pre_image, (24, 48))
+        self.image = pygame.transform.rotate(scaled_image, angle)
         self.rect = self.image.get_rect(center=self.rect.center)
