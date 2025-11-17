@@ -29,12 +29,21 @@ class Bullet(pygame.sprite.Sprite):
 
         #移動
         self.speed = 8
+        self.direction = pygame.math.Vector2(0, -1) # 進行方向ベクトル
     def check_off_screen(self):
         # 弾がゲームエリアの上下左右いずれかの外に出たら消去する
         if self.rect.bottom < 0 or self.rect.top > screen_height or \
            self.rect.right < 0 or self.rect.left > GAME_AREA_WIDTH:
             self.kill()
    
+    def reset(self, x, y):
+        """オブジェクトプールから再利用される際に状態をリセットする"""
+        self.pos = pygame.math.Vector2(x, y)
+        self.rect.midbottom = (x, y)
+        self.direction = pygame.math.Vector2(0, -1)
+        self.index = 0
+        self.animation() # 画像を初期状態に
+
     def animation(self):
         self.index += 0.05
         
@@ -45,13 +54,20 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.pre_image,(24, 48))
 
     def move(self):
-        self.pos.y -= self.speed
+        self.pos += self.direction * self.speed
         self.rect.center = self.pos
 
     def update(self):
         self.move()
         self.check_off_screen()
         self.animation()
+
+        # 進行方向に応じて画像を回転させる
+        angle = -self.direction.angle_to(pygame.math.Vector2(0, -1))
+        # アニメーションで更新されたself.imageを回転させる
+        self.image = pygame.transform.rotate(self.image, angle)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
 
 class HomingBullet(Bullet):
     """敵を追尾する弾"""
@@ -67,6 +83,16 @@ class HomingBullet(Bullet):
 
         # 最初にターゲットを見つけたら、以降は再探索しない
         self.has_initial_target = False
+
+    def reset(self, x, y):
+        """ホーミング弾用のリセットメソッド"""
+        super().reset(x, y)
+        self.rect.center = (x, y) # HomingBulletは中央から発射される
+        self.target = None
+        self.has_initial_target = False
+        # 発射直後は真上に飛ぶ
+        self.direction = pygame.math.Vector2(0, -1)
+
 
     def find_target(self):
         # ターゲットがいない、またはターゲットが倒された場合、新しいターゲットを探す

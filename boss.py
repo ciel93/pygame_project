@@ -7,8 +7,8 @@ from setting import *
 
 class BossEnemy(Enemy):
     """ボス：HP大・パターン切替え・視覚的に目立つ"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 1.0
         self.health = 150
         self.max_health = 150
@@ -139,7 +139,8 @@ class BossEnemy(Enemy):
                 # V字に広がるように、各弾に少しだけ横方向のベクトルを与える
                 direction_x = i * 0.08
                 direction = pygame.math.Vector2(direction_x, 1).normalize()
-                EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed, direction=direction)
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(x, y, self.player_group, speed=speed, direction=direction)
             self.angle += 0.18
 
     def _burst_ring(self):
@@ -148,8 +149,9 @@ class BossEnemy(Enemy):
             for i in range(-8, 9): # さらに拡散する弾の数を増やす
                 x = int(self.rect.centerx + i * 25) # 弾同士の間隔をさらに広げる
                 y = self.rect.centery + 10
-                speed = 1.8 + abs(i)*0.08
-                EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed)
+                speed = 1.8 + abs(i) * 0.08
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(x, y, self.player_group, speed=speed)
 
     def _scatter_shot(self):
         """n-way弾を扇状にばらまく"""
@@ -163,8 +165,9 @@ class BossEnemy(Enemy):
             for i in range(n):
                 # 各弾の角度を計算
                 angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i
-                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
+                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle)) # directionを定義
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
     
     def _scatter_shot_staggered(self):
         """n-way弾を扇状に発射し、偶数列の角度をずらす"""
@@ -176,8 +179,9 @@ class BossEnemy(Enemy):
             spread_angle_rad = math.radians(spread_angle_deg)
             for i in range(n):
                 angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i + angle_shift_for_column
-                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
+                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle)) # directionを定義
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
             self.scatter_shot_column_counter += 1 # カウンターをインクリメント
     
     def _homing_shot(self):
@@ -192,15 +196,14 @@ class BossEnemy(Enemy):
                     direction = pygame.math.Vector2(0, 1)
                 else:
                     direction = pygame.math.Vector2(dx, dy).normalize()
-
                 bullet_speed = 3.0
                 # 弾を生成（プレイヤーを狙う）
-                EnemyBullet(self.enemy_bullets,
-                            self.rect.centerx,
-                            self.rect.bottom,
-                            self.player_group,
-                            speed=bullet_speed,
-                            direction=direction)
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx,
+                             self.rect.bottom,
+                             self.player_group,
+                             speed=bullet_speed,
+                             direction=direction)
 
     def _double_helix(self):
         """二重螺旋状に弾を発射する"""
@@ -210,12 +213,14 @@ class BossEnemy(Enemy):
             center_x = self.rect.centerx + math.cos(self.angle * 0.5) * 40
             
             # 螺旋1
-            x1 = center_x + amplitude * math.sin(self.angle)
-            EnemyBullet(self.enemy_bullets, x1, self.rect.bottom, self.player_group, speed=3.5)
+            x1 = center_x + amplitude * math.sin(self.angle) # x1を定義
+            bullet1 = self.enemy_bullet_pool.get()
+            bullet1.reset(x1, self.rect.bottom, self.player_group, speed=3.5)
 
             # 螺旋2（位相を180度ずらす）
-            x2 = center_x + amplitude * math.sin(self.angle + math.pi)
-            EnemyBullet(self.enemy_bullets, x2, self.rect.bottom, self.player_group, speed=3.5)
+            x2 = center_x + amplitude * math.sin(self.angle + math.pi) # x2を定義
+            bullet2 = self.enemy_bullet_pool.get()
+            bullet2.reset(x2, self.rect.bottom, self.player_group, speed=3.5)
 
             self.angle += 0.12 # 角度の更新を緩やかにして、縦に引き伸ばす
 
@@ -236,16 +241,18 @@ class BossEnemy(Enemy):
                     else:
                         direction = pygame.math.Vector2(dx, dy).normalize()
                     
-                    # 自機狙い弾は少し速くする
-                    EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction, radius=16, bullet_type='homing')
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction, radius=16, bullet_type='homing')
 
             for i in range(num_arms):
                 angle_offset = (2 * math.pi / num_arms) * i
 
                 # 時計回りの渦
                 current_angle = self.vortex_angle + angle_offset
-                direction = pygame.math.Vector2(math.cos(current_angle), math.sin(current_angle))
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=1.5, direction=direction, bullet_type='vortex')
+                direction = pygame.math.Vector2(math.cos(current_angle), math.sin(current_angle)) # directionを定義
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=1.5, direction=direction, bullet_type='vortex')
+
 
                 # 反時計回りの渦
                 current_angle_rev = -self.vortex_angle + angle_offset
@@ -266,7 +273,8 @@ class BossEnemy(Enemy):
             
             # 細長いレーザー弾を生成
             # radiusを大きくしてレーザーをさらに太くする
-            EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=speed, direction=direction, radius=32, length=150, color=(255, 50, 255), bullet_type='laser')
+            bullet = self.enemy_bullet_pool.get()
+            bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=speed, direction=direction, radius=32, length=150, color=(255, 50, 255), bullet_type='laser')
 
         # 角度を更新して薙ぎ払い
         self.laser_angle += 0.6 * self.laser_sweep_dir # 薙ぎ払う速度をさらに遅くする
@@ -280,7 +288,8 @@ class BossEnemy(Enemy):
             x = random.randint(0, GAME_AREA_WIDTH)
             speed = random.uniform(2.5, 5.0)
             # 弾の色を青みがかった色にする
-            EnemyBullet(self.enemy_bullets, x, 0, self.player_group, speed=speed, bullet_type='ice')
+            bullet = self.enemy_bullet_pool.get()
+            bullet.reset(x, 0, self.player_group, speed=speed, bullet_type='ice')
 
     def _laevateinn_sweep(self):
         """東方風のレーヴァテイン薙ぎ払い"""
@@ -307,19 +316,21 @@ class BossEnemy(Enemy):
                 angle_rad = math.radians(angle_deg)
                 direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
 
-                sword_length = 18
+                sword_length = 24 # 弾数を増やす
                 for i in range(sword_length):
-                    dist = i * 28
+                    dist = i * 18 # 弾の間隔を狭める
                     pos = pygame.math.Vector2(self.rect.center) + direction * dist
-                    speed = 2.0 + (i / sword_length) * 3.0
-                    radius = 10 + (i / sword_length) * 12
-                    red_val = 150 + (i / sword_length) * 105
-                    EnemyBullet(self.enemy_bullets, pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
+                    speed = 1.8 + (i / sword_length) * 2.5 # 弾速を少し遅くする
+                    radius = 6 + (i / sword_length) * 8 # 弾を小さくする
+                    red_val = 150 + (i / sword_length) * 105 # red_valを定義
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
         # フェーズ3: 横移動しながら剣を突き出す
         else:
             self.image = self.original_image.copy() # 色を元に戻す
             self.is_laevateinn_moving = True
-            self.laevateinn_move_dir = self.laevateinn_dir
+            self.laevateinn_move_dir = self.laevateinn_dir            
+
             if self.pattern_timer % 14 == 0: # 間隔を広げる
                 angle_deg = 90
                 angle_rad = math.radians(angle_deg)
@@ -329,10 +340,11 @@ class BossEnemy(Enemy):
                 for i in range(sword_length):
                     dist = i * 28
                     pos = pygame.math.Vector2(self.rect.center) + direction * dist
-                    speed = 2.0 + (i / sword_length) * 3.0
+                    speed = 2.0 + (i / sword_length) * 3.0                    
                     radius = 10 + (i / sword_length) * 12
-                    red_val = 150 + (i / sword_length) * 105
-                    EnemyBullet(self.enemy_bullets, pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
+                    red_val = 150 + (i / sword_length) * 105 # red_valを定義
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
 
     def _perfect_freeze(self):
         """パーフェクトフリーズ風弾幕: 弾を生成し、一定時間後に一斉に動き出す"""
@@ -351,9 +363,9 @@ class BossEnemy(Enemy):
                 pos = pygame.math.Vector2(self.rect.center) + pos_offset
                 # 弾の発射方向（中心から外側へ）
                 direction_outward = pos_offset.normalize()
-                # 弾ごとに異なる凍結時間を設定
-                current_frozen_duration = base_frozen_duration + (i * delay_per_bullet)
-                EnemyBullet(self.enemy_bullets, pos.x, pos.y, self.player_group, speed=2.5, direction=direction_outward, bullet_type='ice', frozen_duration=current_frozen_duration)
+                current_frozen_duration = base_frozen_duration + (i * delay_per_bullet) # current_frozen_durationを定義
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(pos.x, pos.y, self.player_group, speed=2.5, direction=direction_outward, bullet_type='ice', frozen_duration=current_frozen_duration)
 
     def check_death(self):
         # 倒された最初のフレームでフラグを立てる

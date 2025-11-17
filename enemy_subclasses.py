@@ -7,8 +7,8 @@ from setting import *
 
 class FastEnemy(Enemy):
     """素早く動いて少ないHPの敵、スポーン時に停止して自機狙い弾を発射"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 3          # 速く移動
         self.health = 1         # 低HP
         self.score_value = 20   # FastEnemyのスコア
@@ -69,13 +69,13 @@ class FastEnemy(Enemy):
 
                         bullet_speed = 3.0 # 弾速を遅くする
                         # 弾を生成（direction を直接渡す）
-                        EnemyBullet(self.enemy_bullets,
-                                    self.rect.centerx,
-                                    self.rect.bottom,
-                                    self.player_group,
-                                    speed=bullet_speed,
-                                    direction=direction)
-
+                        bullet = self.enemy_bullet_pool.get()
+                        bullet.reset(self.rect.centerx,
+                                     self.rect.bottom,
+                                     self.player_group,
+                                     speed=bullet_speed,
+                                     direction=direction)
+                        
                         self.aim_shots += 1
                         self.last_shot_time = now
 
@@ -105,8 +105,8 @@ class FastEnemy(Enemy):
 
 class TankEnemy(Enemy):
     """遅いが耐久力のある敵、サイン波移動＋ランダム突進（バースト）"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 0.5       # 基本の縦速度
         self.health = 6        # 高HP
         self.score_value = 30  # TankEnemyのスコア
@@ -204,7 +204,8 @@ class TankEnemy(Enemy):
                     x = int(self.rect.centerx + ox + random.uniform(-4,4))
                     y = self.rect.bottom + 6 + random.randint(0,6)
                     speed = random.uniform(1.2, 2.5) # 弾速を遅くする
-                    EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed)
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(x, y, self.player_group, speed=speed)
             self.fire_timer = 0
 
     def update(self):
@@ -217,8 +218,8 @@ class TankEnemy(Enemy):
 
 class WaveEnemy(Enemy):
     """波のように上下に揺れながら横に移動する敵"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 2.5  # 横方向の基本速度
         self.health = 2
         self.score_value = 25 # WaveEnemyのスコア
@@ -268,7 +269,8 @@ class WaveEnemy(Enemy):
         if self.fire_timer > 60:
             self.fire_timer = 0
             # 真下に弾を発射
-            EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=2.5) # 弾速を遅くする
+            bullet = self.enemy_bullet_pool.get()
+            bullet.reset(self.rect.centerx, self.rect.bottom, self.player_group, speed=2.5)
 
     def update(self):
         self.move()
@@ -278,8 +280,8 @@ class WaveEnemy(Enemy):
 
 class HunterEnemy(Enemy):
     """プレイヤーを追いかけ、狙い撃ちしてくる強化された敵"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 2.0       # 追尾速度
         self.health = 4        # 少し高めのHP
         self.score_value = 40  # HunterEnemyのスコア
@@ -325,7 +327,8 @@ class HunterEnemy(Enemy):
                 direction = player.pos - self.pos
                 if direction.length_squared() > 0:
                     direction.normalize_ip()
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=3.0, direction=direction) # 弾速を遅くする
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.bottom, self.player_group, speed=3.0, direction=direction)
 
     def update(self):
         self.move()

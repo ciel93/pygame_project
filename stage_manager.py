@@ -8,10 +8,11 @@ from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss
 
 class StageManager:
     """ステージ進行と敵の出現を管理するクラス"""
-    def __init__(self, enemy_group, player_group, item_group):
+    def __init__(self, enemy_group, player_group, item_group, enemy_bullet_pool=None):
         self.enemy_group = enemy_group
         self.player_group = player_group
         self.item_group = item_group
+        self.enemy_bullet_pool = enemy_bullet_pool
 
         self.stage_schedules = {
             1: [ # ステージ1
@@ -152,7 +153,7 @@ class StageManager:
             x = random.randint(50, GAME_AREA_WIDTH - 50)
             y = 10
 
-        enemy_map = {
+        enemy_map = { # enemy_bullet_pool を渡すように変更
             'normal': Enemy,
             'fast': FastEnemy,
             'tank': TankEnemy,
@@ -170,7 +171,7 @@ class StageManager:
             y = -80 if spawn_type != 'grand_boss' else -120
             x = GAME_AREA_WIDTH // 2
 
-        enemy_class(self.enemy_group, x, y, player.bullet_group, self.player_group, enemy_bullets, self.item_group)
+        enemy_class(self.enemy_group, x, y, player.bullet_group, self.player_group, enemy_bullets, self.item_group, enemy_bullet_pool=self.enemy_bullet_pool)
 
     def reset(self):
         """ステージマネージャーの状態をリセットする"""

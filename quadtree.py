@@ -61,6 +61,15 @@ class Quadtree:
                     if node.boundary.colliderect(o.rect):
                         node.insert(o)
             self.objects.clear()
+            
+    def draw(self, screen):
+        """Quadtreeの矩形領域を再帰的に描画する（デバッグ用）"""
+        # 半透明の描画用にSurfaceを作成
+        s = pygame.Surface((self.boundary.width, self.boundary.height), pygame.SRCALPHA)
+        pygame.draw.rect(s, (0, 255, 0, 50), s.get_rect(), 1) # 4番目の値(50)がアルファ値
+        screen.blit(s, self.boundary.topleft)
+        for node in self.nodes:
+            node.draw(screen)
 
     def query(self, range_rect, found_objects):
         """指定された範囲(range_rect)内のオブジェクトを検索する"""

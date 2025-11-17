@@ -9,7 +9,7 @@ class Enemy(pygame.sprite.Sprite):
     # 画像をキャッシュするためのクラス変数
     _image_cache = {}
 
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
         super().__init__(groups)
 
         self.screen = pygame.display.get_surface()
@@ -25,6 +25,7 @@ class Enemy(pygame.sprite.Sprite):
         # 敵が発射する弾のグループ（共有グループを受け取る）
         # enemy_bullets_group が渡されていればそれを使い、なければローカルグループを作る
         self.enemy_bullets = enemy_bullets_group if enemy_bullets_group is not None else pygame.sprite.Group()
+        self.enemy_bullet_pool = enemy_bullet_pool # 敵弾のプール
         self.fire_timer = 0
 
         #画像
@@ -83,7 +84,9 @@ class Enemy(pygame.sprite.Sprite):
                     y = self.rect.bottom + 6
                     speed = random.uniform(1.5, 3.0) # 弾速を遅くする
                     # 弾は self.enemy_bullets（共有グループ）に追加される
-                    EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed)
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(x, y, self.player_group, speed=speed)
+
             self.fire_timer = 0
 
     def check_off_screen(self):

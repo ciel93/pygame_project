@@ -8,7 +8,7 @@ class Player(pygame.sprite.Sprite):
     # 画像をキャッシュするためのクラス変数
     _image_cache = {}
 
-    def __init__(self, groups, x, y, enemy_group, enemy_bullets_group=None, item_group=None):
+    def __init__(self, groups, x, y, enemy_group, enemy_bullets_group=None, item_group=None, bullet_pool=None, homing_bullet_pool=None):
         super().__init__(groups)
 
         self.screen = pygame.display.get_surface()
@@ -20,6 +20,10 @@ class Player(pygame.sprite.Sprite):
         self.enemy_group = enemy_group
         # 共有の敵弾グループ（Game で作成したグループを受け取る）
         self.enemy_bullets = enemy_bullets_group
+
+        # オブジェクトプール
+        self.bullet_pool = bullet_pool
+        self.homing_bullet_pool = homing_bullet_pool
 
         #画像
         self.image_list = []
@@ -107,28 +111,36 @@ class Player(pygame.sprite.Sprite):
         if key[pygame.K_z] and self.fire == False:
             # パワーレベルに応じて弾を発射
             if self.power_level == 1:
-                # レベル1: 中央に1発
-                Bullet(self.bullet_group, self.rect.centerx, self.rect.top)
+                bullet = self.bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.top)
             elif self.power_level == 2:
-                # レベル2: 少し開いた2発
-                Bullet(self.bullet_group, self.rect.centerx - 10, self.rect.centery)
-                Bullet(self.bullet_group, self.rect.centerx + 10, self.rect.centery)
+                b1 = self.bullet_pool.get()
+                b1.reset(self.rect.centerx - 10, self.rect.centery)
+                b2 = self.bullet_pool.get()
+                b2.reset(self.rect.centerx + 10, self.rect.centery)
             elif self.power_level == 3:
-                # レベル3: 3-way弾
-                Bullet(self.bullet_group, self.rect.centerx, self.rect.top)
-                Bullet(self.bullet_group, self.rect.centerx - 20, self.rect.centery)
-                Bullet(self.bullet_group, self.rect.centerx + 20, self.rect.centery)
+                b1 = self.bullet_pool.get()
+                b1.reset(self.rect.centerx, self.rect.top)
+                b2 = self.bullet_pool.get()
+                b2.reset(self.rect.centerx - 20, self.rect.centery)
+                b3 = self.bullet_pool.get()
+                b3.reset(self.rect.centerx + 20, self.rect.centery)
             elif self.power_level == 4:
-                # レベル4: 前方2連射 + 広めの2-way弾
-                Bullet(self.bullet_group, self.rect.centerx - 8, self.rect.top)
-                Bullet(self.bullet_group, self.rect.centerx + 8, self.rect.top)
-                Bullet(self.bullet_group, self.rect.centerx - 25, self.rect.centery)
-                Bullet(self.bullet_group, self.rect.centerx + 25, self.rect.centery)
+                b1 = self.bullet_pool.get()
+                b1.reset(self.rect.centerx - 8, self.rect.top)
+                b2 = self.bullet_pool.get()
+                b2.reset(self.rect.centerx + 8, self.rect.top)
+                b3 = self.bullet_pool.get()
+                b3.reset(self.rect.centerx - 25, self.rect.centery)
+                b4 = self.bullet_pool.get()
+                b4.reset(self.rect.centerx + 25, self.rect.centery)
             elif self.power_level >= 5:
-                # レベル5: 前方3-way弾 + 両サイドからホーミング弾
-                Bullet(self.bullet_group, self.rect.centerx, self.rect.top)
-                Bullet(self.bullet_group, self.rect.centerx - 20, self.rect.centery)
-                Bullet(self.bullet_group, self.rect.centerx + 20, self.rect.centery)
+                b1 = self.bullet_pool.get()
+                b1.reset(self.rect.centerx, self.rect.top)
+                b2 = self.bullet_pool.get()
+                b2.reset(self.rect.centerx - 20, self.rect.centery)
+                b3 = self.bullet_pool.get()
+                b3.reset(self.rect.centerx + 20, self.rect.centery)
 
             self.fire = True
 
@@ -167,23 +179,32 @@ class Player(pygame.sprite.Sprite):
             # ホーミング弾のクールダウンが終わっていれば発射
             if self.homing_timer == 0:
                 if self.power_level == 5:
-                    # レベル5: 2発
-                    HomingBullet(self.bullet_group, self.rect.left, self.rect.centery, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.right, self.rect.centery, self.enemy_group)
+                    b1 = self.homing_bullet_pool.get()
+                    b1.reset(self.rect.left, self.rect.centery)
+                    b2 = self.homing_bullet_pool.get()
+                    b2.reset(self.rect.right, self.rect.centery)
                 elif self.power_level == 6:
-                    # レベル6: 4発
-                    HomingBullet(self.bullet_group, self.rect.left - 10, self.rect.centery, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.right + 10, self.rect.centery, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.left, self.rect.top, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.right, self.rect.top, self.enemy_group)
+                    b1 = self.homing_bullet_pool.get()
+                    b1.reset(self.rect.left - 10, self.rect.centery)
+                    b2 = self.homing_bullet_pool.get()
+                    b2.reset(self.rect.right + 10, self.rect.centery)
+                    b3 = self.homing_bullet_pool.get()
+                    b3.reset(self.rect.left, self.rect.top)
+                    b4 = self.homing_bullet_pool.get()
+                    b4.reset(self.rect.right, self.rect.top)
                 elif self.power_level >= 7:
-                    # レベル7以上: 6発
-                    HomingBullet(self.bullet_group, self.rect.left - 15, self.rect.centery, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.right + 15, self.rect.centery, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.left, self.rect.top, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.right, self.rect.top, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.centerx - 15, self.rect.top - 10, self.enemy_group)
-                    HomingBullet(self.bullet_group, self.rect.centerx + 15, self.rect.top - 10, self.enemy_group)
+                    b1 = self.homing_bullet_pool.get()
+                    b1.reset(self.rect.left - 15, self.rect.centery)
+                    b2 = self.homing_bullet_pool.get()
+                    b2.reset(self.rect.right + 15, self.rect.centery)
+                    b3 = self.homing_bullet_pool.get()
+                    b3.reset(self.rect.left, self.rect.top)
+                    b4 = self.homing_bullet_pool.get()
+                    b4.reset(self.rect.right, self.rect.top)
+                    b5 = self.homing_bullet_pool.get()
+                    b5.reset(self.rect.centerx - 15, self.rect.top - 10)
+                    b6 = self.homing_bullet_pool.get()
+                    b6.reset(self.rect.centerx + 15, self.rect.top - 10)
 
                 self.homing_timer = self.homing_cooldown # タイマーをリセット
 

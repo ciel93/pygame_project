@@ -39,6 +39,9 @@ while run:
             # Hキーで当たり判定の表示を切り替える
             if event.key == pygame.K_h and game.player:
                 game.player.toggle_hitbox()
+            # QキーでQuadtreeの表示を切り替える
+            if event.key == pygame.K_q:
+                game.show_quadtree = not game.show_quadtree
     #画面の更新
     pygame.display.flip()
     clock.tick(FPS)

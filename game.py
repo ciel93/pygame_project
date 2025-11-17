@@ -1,6 +1,7 @@
 import pygame
 from setting import *
 from player import Player
+from bullet import Bullet, HomingBullet
 from enemy import Enemy
 from boss import BossEnemy
 from boss_subclasses import GrandBossEnemy, Stage1Boss
@@ -8,6 +9,7 @@ from enemy_bullet import EnemyBullet
 from stage_manager import StageManager
 from support import draw_text
 from quadtree import Quadtree
+from pooling import BulletPool
 
 class Game:
 
@@ -20,11 +22,31 @@ class Game:
         #グループの作成
         self.create_group()
 
-        # 衝突判定用のQuadtreeを作成
-        self.quadtree = Quadtree(0, pygame.Rect(0, 0, GAME_AREA_WIDTH, screen_height))
+        # 衝突判定用のQuadtreeを種類別に作成
+        boundary = pygame.Rect(0, 0, GAME_AREA_WIDTH, screen_height)
+        self.enemy_quadtree = Quadtree(0, boundary)
+        self.enemy_bullet_quadtree = Quadtree(0, boundary)
+        self.player_bullet_quadtree = Quadtree(0, boundary)
+
+        # 弾のオブジェクトプールを作成
+        self.bullet_pool = BulletPool(
+            bullet_factory=lambda: Bullet(pygame.sprite.Group(), 0, 0),
+            initial_size=50,
+            add_to_group_func=lambda bullet: self.player.bullet_group.add(bullet)
+        )
+        self.homing_bullet_pool = BulletPool(
+            bullet_factory=lambda: HomingBullet(pygame.sprite.Group(), 0, 0, self.enemy_group),
+            initial_size=20,
+            add_to_group_func=lambda bullet: self.player.bullet_group.add(bullet)
+        )
+        self.enemy_bullet_pool = BulletPool(
+            bullet_factory=lambda: EnemyBullet(pygame.sprite.Group(), 0, 0, self.player_group), # 敵弾はプレイヤーをターゲットにする
+            initial_size=200, # 敵弾は数が多いので多めに
+            add_to_group_func=lambda bullet: self.enemy_bullets.add(bullet)
+        )
 
         #自機
-        self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group)
+        self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
         
         #背景
         self.bg_images = []
@@ -49,13 +71,14 @@ class Game:
         self.bg_y = 0
 
         # ステージ管理
-        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group)
+        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group, self.enemy_bullet_pool)
 
         #ゲームオーバー
         self.game_over = False
         self.game_clear = False
         self.grand_boss_defeated = False # 大ボスを倒したかどうかのフラグ
         self.paused = False # ポーズ状態のフラグ
+        self.show_quadtree = False # Quadtreeの表示フラグ
 
     def create_group(self):
         self.player_group = pygame.sprite.GroupSingle()
@@ -65,9 +88,10 @@ class Game:
         self.item_group = pygame.sprite.Group()
 
     def player_death(self):
-        if len(self.player_group) == 0:
+        if len(self.player_group) == 0 and not self.game_over: # game_overフラグが既にTrueでない場合のみ実行
             self.game_over = True
             draw_text(self.screen, 'game over', GAME_AREA_WIDTH // 2, screen_height //2 ,75 , RED)
+            self.player = None # プレイヤーオブジェクトへの参照を削除
             self.stage_manager.spawn_active = False # 敵の出現を停止
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
@@ -80,8 +104,12 @@ class Game:
         key = pygame.key.get_pressed()
         if (self.game_over or self.game_clear) and key[pygame.K_SPACE]:
             # プレイヤーを再生成（敵弾グループも渡す）
-            self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group)
+            self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
             
+            # プールをクリアまたはリセット
+            self.bullet_pool.pool.clear() # プール内の弾はkill()されていないので、ここでクリア
+            self.homing_bullet_pool.pool.clear()
+            self.enemy_bullet_pool.pool.clear()
             # 既存の敵と弾をすべて削除
             self.enemy_group.empty()
             self.enemy_bullets.empty()
@@ -242,21 +270,33 @@ class Game:
             self.check_boss_defeat_and_convert_bullets()
 
             # --- Quadtreeを使った衝突判定 ---
-            # 1. Quadtreeをクリア
-            self.quadtree.clear()
+            # 1. 各Quadtreeをクリア
+            self.enemy_quadtree.clear()
+            self.enemy_bullet_quadtree.clear()
+            self.player_bullet_quadtree.clear()
             
             # 2. 衝突判定の対象となるオブジェクトをすべて挿入
-            for sprite in self.player_group: self.quadtree.insert(sprite)
-            for sprite in self.enemy_group: self.quadtree.insert(sprite)
-            for sprite in self.player.bullet_group: self.quadtree.insert(sprite)
-            for sprite in self.enemy_bullets: self.quadtree.insert(sprite)
+            for enemy in self.enemy_group: self.enemy_quadtree.insert(enemy)
+            for bullet in self.enemy_bullets: self.enemy_bullet_quadtree.insert(bullet)
+            for bullet in self.player.bullet_group: self.player_bullet_quadtree.insert(bullet)
 
             # 3. 衝突判定の実行
             self.check_collisions_with_quadtree()
 
+            # 4. 画面外のプレイヤー弾をプールに戻す
+            self.check_player_bullets_off_screen()
+
+            # 5. 画面外の敵弾をプールに戻す
+            self.check_enemy_bullets_off_screen()
+
             # ボム発動中は敵弾を消去
             if self.player and self.player.bomb_active:
                 self.enemy_bullets.empty()
+
+        # Quadtreeの描画（デバッグ用）
+        if self.show_quadtree:
+            self.enemy_quadtree.draw(self.screen)
+            self.enemy_bullet_quadtree.draw(self.screen)
 
         # --- 以下はポーズ中も実行される描画処理 ---
 
@@ -305,39 +345,36 @@ class Game:
             return
 
         # プレイヤー vs 敵弾/敵本体
-        possible_collisions = set()
-        self.quadtree.query(self.player.rect, possible_collisions)
-        
-        for obj in possible_collisions:
-            # プレイヤー vs 敵本体
-            if isinstance(obj, Enemy) and not isinstance(obj, BossEnemy):
-                # 円形当たり判定に変更
-                if self.player.pos.distance_to(obj.pos) < self.player.radius + obj.radius:
-                    self.player.take_damage()
-                    obj.kill()
-                    return # 1フレームに1回だけダメージを受ける
-            
-            # プレイヤー vs 敵弾
-            if isinstance(obj, EnemyBullet):
-                if self.player.pos.distance_to(obj.pos) < self.player.radius + obj.radius:
-                    self.player.take_damage()
-                    obj.kill() # TODO: オブジェクトプーリングを実装する場合、プールに戻す
-                    return # 1フレームに1回だけダメージを受ける
+        possible_enemies = set()
+        self.enemy_quadtree.query(self.player.rect, possible_enemies)
+        for enemy in possible_enemies:
+            if not isinstance(enemy, BossEnemy) and self.player.pos.distance_to(enemy.pos) < self.player.radius + enemy.radius:
+                self.player.take_damage()
+                enemy.kill()
+                return
+
+        possible_enemy_bullets = set()
+        self.enemy_bullet_quadtree.query(self.player.rect, possible_enemy_bullets)
+        for bullet in possible_enemy_bullets:
+            if self.player.pos.distance_to(bullet.pos) < self.player.radius + bullet.radius:
+                self.player.take_damage()
+                self.enemy_bullet_pool.put(bullet) # プールに戻す
+                return
 
         # プレイヤーの弾 vs 敵
-        for bullet in self.player.bullet_group:
+        for bullet in self.player.bullet_group if self.player else []:
             possible_enemies = set()
-            # 弾の周辺だけをクエリする
             query_rect = bullet.rect.inflate(20, 20)
-            self.quadtree.query(query_rect, possible_enemies)
-
+            self.enemy_quadtree.query(query_rect, possible_enemies)
             for enemy in possible_enemies:
-                # BossEnemyもEnemyのサブクラスなので、isinstance(enemy, Enemy)で判定
-                if isinstance(enemy, Enemy):
-                    if bullet.pos.distance_to(enemy.pos) < bullet.radius + enemy.radius:
-                        enemy.take_damage(1)
-                        bullet.kill()
-                        break # 弾は1体の敵にしか当たらない
+                if bullet.pos.distance_to(enemy.pos) < bullet.radius + enemy.radius:
+                    enemy.take_damage(1)
+                    # bullet.kill() の代わりにプールに戻す
+                    if isinstance(bullet, HomingBullet):
+                        self.homing_bullet_pool.put(bullet)
+                    else:
+                        self.bullet_pool.put(bullet)
+                    break
 
     def check_item_collision(self):
         """プレイヤーとアイテムの衝突をチェックし、効果を適用する"""
@@ -353,3 +390,20 @@ class Game:
                         self.player.bombs += 1
                 elif item.item_type == 'score':
                     self.score += item.value
+
+    def check_player_bullets_off_screen(self):
+        """画面外に出たプレイヤーの弾をプールに戻す"""
+        for bullet in self.player.bullet_group:
+            if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
+               bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
+                if isinstance(bullet, HomingBullet):
+                    self.homing_bullet_pool.put(bullet)
+                else:
+                    self.bullet_pool.put(bullet)
+
+    def check_enemy_bullets_off_screen(self):
+        """画面外に出た敵弾をプールに戻す"""
+        for bullet in self.enemy_bullets:
+            if bullet.rect.top > screen_height or bullet.rect.bottom < 0 or \
+               bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
+                self.enemy_bullet_pool.put(bullet)

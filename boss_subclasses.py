@@ -6,8 +6,8 @@ from boss import BossEnemy
 
 class GrandBossEnemy(BossEnemy):
     """ゲームの最終ボス（大ボス）"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         
         # 大ボス専用のパラメータで上書き
         self.health = 300  # HPを大幅に増やす
@@ -79,8 +79,8 @@ class GrandBossEnemy(BossEnemy):
 
 class Stage1Boss(BossEnemy):
     """ステージ1専用のボス"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         
         # ステージ1ボス専用のパラメータで上書き
         self.health = 100
@@ -135,8 +135,8 @@ class Stage1Boss(BossEnemy):
 
 class Stage2MidBoss(BossEnemy):
     """ステージ2の中ボス"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         
         # ステージ2中ボス専用のパラメータ
         self.health = 180
