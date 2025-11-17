@@ -51,9 +51,9 @@ class Item(pygame.sprite.Sprite):
         # 位置を浮動小数点で管理
         self.pos = pygame.math.Vector2(self.rect.center)
         # アイテム吸い込み用のフラグと速度
-        self.value = 500 if item_type == 'score' else 0 # スコアアイテムの価値
+        self.value = 1000 if item_type == 'score' else 0 # スコアアイテムの価値を1000に増加
         self.is_attracted = False
-        self.attraction_speed = 8
+        self.attraction_speed = 12 # 吸い込み速度を8から12に増加
 
     def update(self, player_pos=None):
         # プレイヤーに引き寄せられている場合

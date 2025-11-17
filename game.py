@@ -49,6 +49,7 @@ class Game:
         self.game_over = False
         self.game_clear = False
         self.grand_boss_defeated = False # 大ボスを倒したかどうかのフラグ
+        self.paused = False # ポーズ状態のフラグ
 
     def create_group(self):
         self.player_group = pygame.sprite.GroupSingle()
@@ -201,30 +202,60 @@ class Game:
 
     def run(self, clock):
         self.scroll_bg()
-
-        # ステージ管理と敵生成
-        result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
-        if result == "game_clear":
-            self.game_clear = True
-        elif isinstance(result, int): # ステージ移行
-             self.bg_img = self.bg_images[result - 1]
         
-        #グループの描画と更新
+        if self.paused:
+            # ポーズ中は描画のみ行い、更新処理をスキップ
+            draw_text(self.screen, 'PAUSED', GAME_AREA_WIDTH // 2, screen_height // 2, 75, WHITE)
+        else:
+            # ステージ管理と敵生成
+            result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
+            if result == "game_clear":
+                self.game_clear = True
+            elif isinstance(result, int): # ステージ移行
+                 self.bg_img = self.bg_images[result - 1]
+            
+            # グループの更新
+            self.player_group.update()
+            if self.player:
+                self.player.bomb_group.update()
+                self.player.bullet_group.update()
+            self.enemy_group.update()
+            self.enemy_bullets.update()
+
+            # アイテムの更新（プレイヤーが生きている場合、位置を渡す）
+            if len(self.player_group) > 0:
+                self.item_group.update(self.player.pos)
+                self.check_item_collision()
+            else:
+                self.item_group.update()
+
+            # スコア加算のチェック
+            self.check_score_award()
+
+            # ボス撃破時の弾消し＆スコア加算
+            self.check_boss_defeat_and_convert_bullets()
+
+            # ボム発動中は敵弾を消去
+            if self.player and self.player.bomb_active:
+                self.enemy_bullets.empty()
+
+        # --- 以下はポーズ中も実行される描画処理 ---
+
+        # グループの描画
         self.player_group.draw(self.screen)
-        self.player_group.update()
-
-        # ボムの描画と更新
         if self.player:
-            self.player.bomb_group.update()
             self.player.bomb_group.draw(self.screen)
-
-        # プレイヤーの弾を描画・更新
-        if self.player:
             self.player.bullet_group.draw(self.screen)
-            self.player.bullet_group.update()
-
         self.enemy_group.draw(self.screen)
-        self.enemy_group.update()
+        self.enemy_bullets.draw(self.screen)
+        self.item_group.draw(self.screen)
+        
+        # プレイヤーの当たり判定を描画 (デバッグ用)
+        if self.player and self.player.show_hitbox:
+            # 緑の円でヒットボックス、赤い点で中心を表示
+            pygame.draw.circle(self.screen, GREEN, (int(self.player.pos.x), int(self.player.pos.y)), self.player.radius, 1)
+            pygame.draw.circle(self.screen, RED, (int(self.player.pos.x), int(self.player.pos.y)), 2)
+
 
         # ボスがいればHPバーを描画
         for enemy in self.enemy_group:
@@ -232,37 +263,13 @@ class Game:
                 self.draw_boss_hp_bar(enemy)
                 break # ボスは1体しかいないはずなのでループを抜ける
 
-        # スコア加算のチェック
-        self.check_score_award()
-
-        # ボス撃破時の弾消し＆スコア加算
-        self.check_boss_defeat_and_convert_bullets()
-
-        # 共有の敵弾を更新・描画（Enemy を destroy しても弾は残る）
-        self.enemy_bullets.update()
-        self.enemy_bullets.draw(self.screen)
-
-        # ボム発動中は敵弾を消去
-        if self.player and self.player.bomb_active:
-            self.enemy_bullets.empty()
-
-        # アイテムの更新と描画（プレイヤーが生きている場合、位置を渡す）
-        if len(self.player_group) > 0:
-            self.item_group.update(self.player.pos)
-            
-            # アイテム取得処理
-            self.check_item_collision()
-        else:
-            self.item_group.update()
-        self.item_group.draw(self.screen)
-        
         # UI（スコア、ライフなど）を描画
         self.draw_ui(clock)
 
         # ステージクリア時のメッセージ表示
         if self.stage_manager.stage_clear_timer > 0 and not self.game_clear:
             draw_text(self.screen, f'STAGE {self.stage_manager.stage} CLEAR', GAME_AREA_WIDTH // 2, screen_height // 2, 75, GREEN)
-
+        
         # ゲームクリアの判定と描画
         self.grand_boss_death()
         if self.game_clear:

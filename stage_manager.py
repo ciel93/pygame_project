@@ -2,9 +2,9 @@ import pygame
 import random
 from setting import *
 from enemy import Enemy
-from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy
+from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy # boss_subclassesはStageManager内で直接インポート
 from boss import BossEnemy
-from boss_subclasses import GrandBossEnemy, Stage1Boss
+from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss
 
 class StageManager:
     """ステージ進行と敵の出現を管理するクラス"""
@@ -28,9 +28,12 @@ class StageManager:
                 {'start': 0,      'type': 'normal', 'count': 15, 'interval': 400},
                 {'start': 7000,   'type': 'fast',   'count': 8,  'interval': 400},
                 {'start': 13000,  'type': 'hunter', 'count': 6,  'interval': 1200}, # 新しい敵を追加
-                {'start': 20000,  'type': 'tank',   'count': 8,  'interval': 800},
-                {'start': 28000,  'type': 'wave',   'count': 10, 'interval': 600},
-                {'start': 36000,  'type': 'grand_boss', 'count': 1, 'interval': 0},
+                {'start': 20000,  'type': 'stage2_mid_boss', 'count': 1, 'interval': 0},  # ステージ2の中ボス
+                {'start': 26000,  'type': 'hunter', 'count': 4,  'interval': 1000}, # 中ボス後の追撃
+                {'start': 27000,  'type': 'fast',   'count': 6,  'interval': 500},  # hunterと同時に出現
+                {'start': 32000,  'type': 'tank',   'count': 8,  'interval': 800},
+                {'start': 38000,  'type': 'wave',   'count': 10, 'interval': 600},
+                {'start': 44000,  'type': 'grand_boss', 'count': 1, 'interval': 0},
             ]
         }
         self.stage = 1
@@ -152,6 +155,7 @@ class StageManager:
             'hunter': HunterEnemy, # マップに追加
             'boss': BossEnemy,
             'stage1_boss': Stage1Boss,
+            'stage2_mid_boss': Stage2MidBoss,
             'grand_boss': GrandBossEnemy
         }
 

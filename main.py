@@ -33,6 +33,12 @@ while run:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 run = False
+            # Pキーでポーズ状態を切り替える
+            if event.key == pygame.K_p:
+                game.paused = not game.paused
+            # Hキーで当たり判定の表示を切り替える
+            if event.key == pygame.K_h and game.player:
+                game.player.toggle_hitbox()
     #画面の更新
     pygame.display.flip()
     clock.tick(FPS)

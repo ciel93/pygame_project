@@ -61,7 +61,7 @@ class GrandBossEnemy(BossEnemy):
             self.pattern_timer = 0
             if self.enrage_mode:
                 # 発狂モード: 激しい攻撃の頻度を上げる
-                self.pattern = random.choice([4, 5, 6, 8])
+                self.pattern = random.choice([4, 5, 6, 8]) # アイシクルフォール (7) を削除
             else:
                 # 通常モード: 比較的避けやすい攻撃
                 self.pattern = random.randint(0, 3)
@@ -106,22 +106,70 @@ class Stage1Boss(BossEnemy):
         self.pattern_timer += 1
         if self.pattern_timer > self.pattern_change_time:
             self.pattern_timer = 0
-            # 現在のパターンが待機(8)でなければ、次は待機パターンへ移行
-            if self.pattern != 9:
-                self.pattern = 9
+            # 現在のパターンが待機(11)でなければ、次は待機パターンへ移行
+            if self.pattern != 11:
+                self.pattern = 11
             else:
                 # 待機が終わったら、次の攻撃パターンへ (0, 1, 2をループ)
                 self.pattern = (self.pattern + 1) % 3
 
         # 選択されたパターンを実行
         if self.pattern == 0:
-            # 5-way弾を扇状にばらまく
-            if self.pattern_timer % 40 == 0:
+            # 強化: 7-way弾を短い間隔で発射
+            if self.pattern_timer % 30 == 0:
                 self._scatter_shot()
         elif self.pattern == 1:
-            # プレイヤーを狙う弾を発射
-            if self.pattern_timer % 50 == 0:
+            # 強化: プレイヤーを狙う弾を2発同時に発射
+            if self.pattern_timer % 45 == 0:
                 self._homing_shot()
+                # 少し時間をずらしてもう一発
+                if self.pattern_timer % 90 == 0:
+                    self._homing_shot()
         elif self.pattern == 2:
-            # 横に波打つように弾を発射
-            self._wave_spread()
+            # 強化: V字に広がる波状攻撃
+            if self.pattern_timer % 20 == 0: # 発射間隔を短くする
+                self._wave_spread()
+
+class Stage2MidBoss(BossEnemy):
+    """ステージ2の中ボス"""
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group)
+        
+        # ステージ2中ボス専用のパラメータ
+        self.health = 180
+        self.max_health = 180
+        self.score_value = 150
+        
+        try:
+            # 画像をロード（なければフォールバック）
+            pre = pygame.image.load('assets/img/enemy/stage2_mid_boss.png').convert_alpha()
+            new_width = 130
+            aspect_ratio = pre.get_height() / pre.get_width()
+            new_height = int(new_width * aspect_ratio)
+            self.image = pygame.transform.scale(pre, (new_width, new_height))
+        except Exception:
+            # 画像がない場合のフォールバック
+            surf = pygame.Surface((130, 130), pygame.SRCALPHA)
+            surf.fill(STAGE2_MID_BOSS_COLOR) # 新しい色
+            self.image = surf
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.radius = self.rect.width / 2 * 0.9
+
+        # パターン切替時間
+        self.pattern_change_time = 200
+
+    def create_pattern(self):
+        """ステージ2中ボス用の攻撃パターン"""
+        self.pattern_timer += 1
+        if self.pattern_timer > self.pattern_change_time:
+            self.pattern_timer = 0
+            # 待機を挟みつつ、いくつかのパターンをループ
+            if self.pattern != 11: # 待機パターンを11に変更
+                self.pattern = 11
+            else:
+                # 待機が終わったら、次の攻撃パターンへ (ホーミング、放射状、波状攻撃)
+                self.pattern = random.choice([0, 3, 5])
+
+        # ディスパッチテーブルを使って攻撃パターンを実行
+        if self.pattern in self.attack_patterns:
+            self.attack_patterns[self.pattern]()

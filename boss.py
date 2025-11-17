@@ -18,6 +18,8 @@ class BossEnemy(Enemy):
         self.pattern = 0
         self.angle = 0.0
         self.vortex_angle = 0.0 # うずまき用の角度
+        self.last_attack_pattern = 0 # 攻撃ローテーションの記憶用
+        self.scatter_shot_column_counter = 0 # 扇状弾の偶数列ずらし用カウンター
         # レーザー薙ぎ払い用のパラメータ
         self.laser_angle = 90.0 # 開始角度（真下）
         self.laser_sweep_dir = 1 # 薙ぎ払う方向 (1:時計回り, -1:反時計回り)
@@ -62,6 +64,8 @@ class BossEnemy(Enemy):
             6: self._laser_sweep,
             7: self._icicle_fall,
             8: self._laevateinn_sweep,
+            9: self._perfect_freeze, # 待機(9)を新しい攻撃で上書き
+            10: self._scatter_shot_staggered, # 新しいパターンを追加
         }
 
     def move(self):
@@ -88,42 +92,52 @@ class BossEnemy(Enemy):
 
         # パターンを周期的に切り替えて弾を生成
         # パターン9（待機）の場合は、短い時間で次のパターンへ移行
-        pattern_change_time = 120 if self.pattern == 9 else self.pattern_change_time
+        if self.pattern == 0: # wave_spread
+            pattern_change_time = 360 # wave_spreadの時間を長くする
+        elif self.pattern == 11: # 新しい待機パターン番号
+            pattern_change_time = 120
+        else:
+            pattern_change_time = self.pattern_change_time
 
         self.pattern_timer += 1
         if self.pattern_timer > pattern_change_time:
             self.pattern_timer = 0
             if self.enrage_mode:
                 # 発狂モード: 激しい攻撃をランダムに選択
-                self.pattern = random.choice([4, 5, 6, 7]) # レーヴァテイン(8)は使用しない
+                self.pattern = random.choice([4, 5, 6, 7, 9]) # パーフェクトフリーズ(9)を追加
             else:
                 # 通常モード: パターンを順番に実行し、間に待機を挟む
-                if self.pattern != 9:
-                    self.pattern = 9 # 待機パターンへ
+                if self.pattern != 11: # 待機パターンへ
+                    self.pattern = 11
                 else:
-                    # 待機が終わったら、次の攻撃パターンへ
-                    # (self.pattern + 1) % 8 で 0-7 の攻撃パターンをループさせる
-                    self.pattern = (self.pattern + 1) % 8
+                    # 待機が終わったら、次の攻撃パターンへ (0, 1, 2, 10をループ)
+                    # 0->1->2->10->0...
+                    current_pattern_index = [0, 1, 2, 10].index(self.last_attack_pattern)
+                    self.last_attack_pattern = [0, 1, 2, 10][(current_pattern_index + 1) % 4]
+                    self.pattern = self.last_attack_pattern
 
         # ディスパッチテーブルを使って攻撃パターンを実行
         if self.pattern in self.attack_patterns:
             self.attack_patterns[self.pattern]()
     def _wave_spread(self):
         # 横に波打つように縦列で弾を連続発射（少しずつ横ずれ）
-        if self.pattern_timer % 15 == 0: # 発射間隔を広げて「まばらに」
+        if self.pattern_timer % 25 == 0: # 発射間隔を少し戻す
             offset = math.sin(self.angle) * 80 # 横の揺れ幅を大きくして「広く」
-            for i in range(-2,3):
+            for i in range(-4,5): # 発射数9発
                 x = int(self.rect.centerx + offset + i*20) # 弾同士の間隔も広げる
                 y = self.rect.bottom + 6
-                speed = 1.5 + i*0.1 # 弾速を「遅く」する
-                EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed)
+                speed = 2.0 # 弾速を少し上げる
+                # V字に広がるように、各弾に少しだけ横方向のベクトルを与える
+                direction_x = i * 0.08
+                direction = pygame.math.Vector2(direction_x, 1).normalize()
+                EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed, direction=direction)
             self.angle += 0.18
 
     def _burst_ring(self):
         # 横方向に広がるバースト（ボス直下に複数の弾）
         if self.pattern_timer % 50 == 0:
-            for i in range(-6,7):
-                x = int(self.rect.centerx + i*14)
+            for i in range(-8, 9): # さらに拡散する弾の数を増やす
+                x = int(self.rect.centerx + i * 25) # 弾同士の間隔をさらに広げる
                 y = self.rect.centery + 10
                 speed = 1.8 + abs(i)*0.08
                 EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed)
@@ -131,9 +145,8 @@ class BossEnemy(Enemy):
     def _scatter_shot(self):
         """n-way弾を扇状にばらまく"""
         if self.pattern_timer % 35 == 0: # 発射間隔を調整
-            n = 7  # 発射する弾の数
-            spread_angle_deg = 80  # 弾が広がる全体の角度
-            
+            n = 5  # 発射する弾の数
+            spread_angle_deg = 60  # 弾が広がる全体の角度
             # 扇の中心を真下（90度）に向ける
             center_angle_rad = math.radians(90)
             spread_angle_rad = math.radians(spread_angle_deg)
@@ -143,6 +156,20 @@ class BossEnemy(Enemy):
                 angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i
                 direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
                 EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
+    
+    def _scatter_shot_staggered(self):
+        """n-way弾を扇状に発射し、偶数列の角度をずらす"""
+        if self.pattern_timer % 35 == 0:
+            n = 7
+            spread_angle_deg = 80
+            angle_shift_for_column = math.radians(10) if self.scatter_shot_column_counter % 2 == 0 else 0
+            center_angle_rad = math.radians(90)
+            spread_angle_rad = math.radians(spread_angle_deg)
+            for i in range(n):
+                angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i + angle_shift_for_column
+                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
+                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
+            self.scatter_shot_column_counter += 1 # カウンターをインクリメント
     
     def _homing_shot(self):
         """プレイヤーを狙う弾を定期的に発射する新しいパターン"""
@@ -168,7 +195,7 @@ class BossEnemy(Enemy):
 
     def _double_helix(self):
         """二重螺旋状に弾を発射する"""
-        if self.pattern_timer % 8 == 0: # 8フレーム毎に発射して、隙間を粗くする
+        if self.pattern_timer % 12 == 0: # 12フレーム毎に発射して、隙間をさらに粗くする
             amplitude = 120  # 螺旋の幅を長くする
             # 螺旋の中心をゆっくりと左右に揺らし、安全地帯をなくす
             center_x = self.rect.centerx + math.cos(self.angle * 0.5) * 40
@@ -185,7 +212,7 @@ class BossEnemy(Enemy):
 
     def _radial_vortex(self):
         """中心から放射状に回転しながら弾を発射する"""
-        if self.pattern_timer % 12 == 0: # 弾の発射頻度を下げてまばらに
+        if self.pattern_timer % 25 == 0: # 弾の発射頻度をさらに下げる (20 -> 25)
             num_arms = 6 # 同時に発射する弾の方向（腕の数）
             rotation_speed = 0.07 # 渦全体の回転速度
 
@@ -201,7 +228,7 @@ class BossEnemy(Enemy):
                         direction = pygame.math.Vector2(dx, dy).normalize()
                     
                     # 自機狙い弾は少し速くする
-                    EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction, radius=16, color=ENEMY_BULLET_SPECIAL_COLOR)
+                    EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction, radius=16, bullet_type='homing')
 
             for i in range(num_arms):
                 angle_offset = (2 * math.pi / num_arms) * i
@@ -209,19 +236,19 @@ class BossEnemy(Enemy):
                 # 時計回りの渦
                 current_angle = self.vortex_angle + angle_offset
                 direction = pygame.math.Vector2(math.cos(current_angle), math.sin(current_angle))
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=1.5, direction=direction)
+                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=1.5, direction=direction, bullet_type='vortex')
 
                 # 反時計回りの渦
                 current_angle_rev = -self.vortex_angle + angle_offset
                 direction_rev = pygame.math.Vector2(math.cos(current_angle_rev), math.sin(current_angle_rev))
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=1.0, direction=direction_rev)
+                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=1.0, direction=direction_rev, bullet_type='vortex_rev')
 
             self.vortex_angle += rotation_speed # 角度を更新して渦全体を回転させる
 
     def _laser_sweep(self):
         """レーザーのように弾を薙ぎ払う新しいパターン"""
-        # 弾の生成を12フレームに1回に調整（密度をさらに減らすため）
-        if self.pattern_timer % 12 == 0:
+        # 弾の生成を16フレームに1回に調整（密度をさらに減らすため）
+        if self.pattern_timer % 16 == 0:
             speed = 2.0 # 弾速を遅くする
             
             # レーザーの角度を計算（度数法からラジアンに変換）
@@ -240,11 +267,11 @@ class BossEnemy(Enemy):
 
     def _icicle_fall(self):
         """画面上部からつららのように弾が降り注ぐパターン"""
-        if self.pattern_timer % 8 == 0: # 8フレームごとに弾を生成
+        if self.pattern_timer % 10 == 0: # 10フレームごとに弾を生成
             x = random.randint(0, GAME_AREA_WIDTH)
             speed = random.uniform(2.5, 5.0)
             # 弾の色を青みがかった色にする
-            EnemyBullet(self.enemy_bullets, x, 0, self.player_group, speed=speed, color=(150, 200, 255))
+            EnemyBullet(self.enemy_bullets, x, 0, self.player_group, speed=speed, bullet_type='ice')
 
     def _laevateinn_sweep(self):
         """東方風のレーヴァテイン薙ぎ払い"""
@@ -265,7 +292,7 @@ class BossEnemy(Enemy):
         # フェーズ2: 薙ぎ払い
         elif self.pattern_timer < pre_action_duration + (self.pattern_change_time * 0.6):
             self.image = self.original_image.copy() # 色を元に戻す
-            if (self.pattern_timer - pre_action_duration) % 8 == 0:
+            if (self.pattern_timer - pre_action_duration) % 10 == 0: # 間隔を広げる
                 progress = (self.pattern_timer - pre_action_duration) / (self.pattern_change_time * 0.6)
                 angle_deg = 90 - (80 * progress * self.laevateinn_dir)
                 angle_rad = math.radians(angle_deg)
@@ -284,7 +311,7 @@ class BossEnemy(Enemy):
             self.image = self.original_image.copy() # 色を元に戻す
             self.is_laevateinn_moving = True
             self.laevateinn_move_dir = self.laevateinn_dir
-            if self.pattern_timer % 12 == 0:
+            if self.pattern_timer % 14 == 0: # 間隔を広げる
                 angle_deg = 90
                 angle_rad = math.radians(angle_deg)
                 direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
@@ -297,6 +324,27 @@ class BossEnemy(Enemy):
                     radius = 10 + (i / sword_length) * 12
                     red_val = 150 + (i / sword_length) * 105
                     EnemyBullet(self.enemy_bullets, pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
+
+    def _perfect_freeze(self):
+        """パーフェクトフリーズ風弾幕: 弾を生成し、一定時間後に一斉に動き出す"""
+        # パターン開始時に一度だけ大量の弾を生成
+        if self.pattern_timer == 1:
+            num_bullets = 48 # 生成する弾の数
+            radius = 150 # ボスからの距離
+            base_frozen_duration = 60 # 基本の凍結時間（フレーム）
+            delay_per_bullet = 2 # 弾ごとの追加凍結時間（フレーム）
+
+            for i in range(num_bullets):
+                angle = (360 / num_bullets) * i
+                angle_rad = math.radians(angle)
+                # 弾の生成位置
+                pos_offset = pygame.math.Vector2(radius, 0).rotate(angle)
+                pos = pygame.math.Vector2(self.rect.center) + pos_offset
+                # 弾の発射方向（中心から外側へ）
+                direction_outward = pos_offset.normalize()
+                # 弾ごとに異なる凍結時間を設定
+                current_frozen_duration = base_frozen_duration + (i * delay_per_bullet)
+                EnemyBullet(self.enemy_bullets, pos.x, pos.y, self.player_group, speed=2.5, direction=direction_outward, bullet_type='ice', frozen_duration=current_frozen_duration)
 
     def check_death(self):
         # 倒された最初のフレームでフラグを立てる

@@ -128,6 +128,10 @@ class Player(pygame.sprite.Sprite):
         if key[pygame.K_x] and not self.bomb_active and self.bombs > 0 and self.bomb_timer == 0:
             self.activate_bomb()
 
+    def toggle_hitbox(self):
+        """当たり判定の表示/非表示を切り替える"""
+        self.show_hitbox = not self.show_hitbox
+
     def activate_bomb(self):
         self.bombs -= 1
         self.bomb_active = True
@@ -264,9 +268,3 @@ class Player(pygame.sprite.Sprite):
         self.attract_items()
         self.update_invincibility()
         self.check_death()
-
-         # 当たり判定オーバーレイ表示（デバッグ表示）
-        if self.show_hitbox:
-            # 緑の円でヒットボックス、赤い点で中心を表示
-            pygame.draw.circle(self.screen, GREEN, (int(self.pos.x), int(self.pos.y)), self.radius, 1)
-            pygame.draw.circle(self.screen, RED, (int(self.pos.x), int(self.pos.y)), 2)

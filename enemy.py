@@ -72,7 +72,7 @@ class Enemy(pygame.sprite.Sprite):
                     ox = random.randint(-12, 12)
                     x = self.rect.centerx + ox
                     y = self.rect.bottom + 6
-                    speed = random.uniform(2.0, 4.0)
+                    speed = random.uniform(1.5, 3.0) # 弾速を遅くする
                     # 弾は self.enemy_bullets（共有グループ）に追加される
                     EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed)
             self.fire_timer = 0
@@ -105,9 +105,9 @@ class Enemy(pygame.sprite.Sprite):
                 drop_chance = random.random()
                 if drop_chance < 0.05: # 5%の確率でボム (変更なし)
                     item_type = 'bomb'
-                elif drop_chance < 0.25: # 20%の確率でスコア (5%～25%) (変更なし)
+                elif drop_chance < 0.25: # 20%の確率でスコア (5%～25%)
                     item_type = 'score'
-                elif drop_chance < 0.50: # 25%の確率でパワー (25%～50%)
+                elif drop_chance < 0.70: # 45%の確率でパワー (25%～70%)
                     item_type = 'power'
                 else:
                     item_type = None

@@ -59,7 +59,7 @@ class FastEnemy(Enemy):
                         else:
                             direction = pygame.math.Vector2(dx, dy).normalize()
 
-                        bullet_speed = 4
+                        bullet_speed = 3.0 # 弾速を遅くする
                         # 弾を生成（direction を直接渡す）
                         EnemyBullet(self.enemy_bullets,
                                     self.rect.centerx,
@@ -188,7 +188,7 @@ class TankEnemy(Enemy):
                     ox = -30 + i * (60/(max(1,cnt-1)))  # 横に広げる
                     x = int(self.rect.centerx + ox + random.uniform(-4,4))
                     y = self.rect.bottom + 6 + random.randint(0,6)
-                    speed = random.uniform(1.5, 3.0)
+                    speed = random.uniform(1.2, 2.5) # 弾速を遅くする
                     EnemyBullet(self.enemy_bullets, x, y, self.player_group, speed=speed)
             self.fire_timer = 0
 
@@ -247,7 +247,7 @@ class WaveEnemy(Enemy):
         if self.fire_timer > 60:
             self.fire_timer = 0
             # 真下に弾を発射
-            EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=3.0)
+            EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=2.5) # 弾速を遅くする
 
     def update(self):
         self.move()
@@ -297,7 +297,7 @@ class HunterEnemy(Enemy):
                 direction = player.pos - self.pos
                 if direction.length_squared() > 0:
                     direction.normalize_ip()
-                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=3.5, direction=direction)
+                EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.bottom, self.player_group, speed=3.0, direction=direction) # 弾速を遅くする
 
     def update(self):
         self.move()
