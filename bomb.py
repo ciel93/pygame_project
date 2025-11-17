@@ -2,6 +2,8 @@ import pygame
 from setting import *
 
 class MasterSpark(pygame.sprite.Sprite):
+    _image_cache = {}
+
     """プレイヤーのボム（マスタースパーク）を表現するクラス"""
     def __init__(self, groups, player):
         super().__init__(groups)
@@ -17,10 +19,15 @@ class MasterSpark(pygame.sprite.Sprite):
         self.enemy_group = self.player.enemy_group
 
         # レーザーの画像読み込み
-        try:
-            self.laser_image_base = pygame.image.load('assets/img/bomb/master_spark.png').convert_alpha()
-        except pygame.error:
-            self.laser_image_base = None # 画像がない場合はNone
+        path = 'assets/img/bomb/master_spark.png'
+        if path in MasterSpark._image_cache:
+            self.laser_image_base = MasterSpark._image_cache[path]
+        else:
+            try:
+                self.laser_image_base = pygame.image.load(path).convert_alpha()
+                MasterSpark._image_cache[path] = self.laser_image_base
+            except pygame.error:
+                self.laser_image_base = None # 画像がない場合はNone
 
         # レーザー全体の描画領域と当たり判定用のRect
         # 幅は画像の最大幅に合わせる

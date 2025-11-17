@@ -1,5 +1,6 @@
 import pygame
 import random
+from enemy import Enemy
 from setting import *
 from boss import BossEnemy
 
@@ -14,18 +15,20 @@ class GrandBossEnemy(BossEnemy):
         self.max_health = 300
         self.speed = 0.8   # 少しゆっくり動かす
         
-        try:
-            pre = pygame.image.load('assets/img/enemy/grand_boss.png').convert_alpha()
-            # 横幅を基準に、元のアスペクト比を維持してリサイズ
-            new_width = 180
-            aspect_ratio = pre.get_height() / pre.get_width()
-            new_height = int(new_width * aspect_ratio)
-            self.image = pygame.transform.scale(pre, (new_width, new_height))
-        except Exception:
-            # 画像がない場合のフォールバック
-            surf = pygame.Surface((180, 180), pygame.SRCALPHA)
-            surf.fill(GRAND_BOSS_COLOR)
-            self.image = surf
+        image_path = 'assets/img/enemy/grand_boss.png'
+        if image_path in GrandBossEnemy._image_cache:
+            pre = GrandBossEnemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                GrandBossEnemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        new_width = 180
+        aspect_ratio = pre.get_height() / pre.get_width() if pre else 1
+        new_height = int(new_width * aspect_ratio)
+        self.image = pygame.transform.scale(pre, (new_width, new_height)) if pre else pygame.Surface((new_width, new_height), pygame.SRCALPHA)
+        if not pre: self.image.fill(GRAND_BOSS_COLOR)
         self.rect = self.image.get_rect(center=self.rect.center)
         self.radius = self.rect.width / 2 * 0.9 # 当たり判定を画像の半径に合わせる
 

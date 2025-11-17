@@ -2,13 +2,20 @@ import pygame
 from setting import *
 
 class Bullet(pygame.sprite.Sprite):
+    _image_cache = {}
+
     def __init__(self, groups, x, y):
         super().__init__(groups)
 
         #画像
         self.image_list = []
         for i in range(2):
-            image = pygame.image.load(f'assets/img/bullet/{i}.png').convert_alpha()
+            path = f'assets/img/bullet/{i}.png'
+            if path in Bullet._image_cache:
+                image = Bullet._image_cache[path]
+            else:
+                image = pygame.image.load(path).convert_alpha()
+                Bullet._image_cache[path] = image
             self.image_list.append(image)
 
         self.index = 0
@@ -38,7 +45,8 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.pre_image,(24, 48))
 
     def move(self):
-        self.rect.y -= self.speed
+        self.pos.y -= self.speed
+        self.rect.center = self.pos
 
     def update(self):
         self.move()
@@ -75,7 +83,7 @@ class HomingBullet(Bullet):
                 self.has_initial_target = True
 
     def move(self):
-        # 最初にターゲットを見つけるまで、またはターゲットが生存している間のみ追尾
+        # 最初のターゲットを見つけるまで索敵する
         if not self.has_initial_target:
             self.find_target()
 

@@ -72,6 +72,11 @@ class StageManager:
                 if grand_boss_defeated and self.stage == len(self.stage_schedules):
                     self.spawn_active = False # 敵の出現を停止
                     return "game_clear" # ゲームクリアをGameクラスに通知
+                # ボスが倒された直後のフレームで grand_boss_defeated がまだFalseの場合があるため、ここで再チェック
+                is_boss_alive = any(isinstance(enemy, BossEnemy) for enemy in self.enemy_group)
+                if not is_boss_alive and self.stage == len(self.stage_schedules):
+                    return "game_clear"
+                self.stage_clear_timer = 0 # タイマーをリセットして再実行を防ぐ
                 return self.start_stage(self.stage + 1) # 次のステージへ移行
             return None
 

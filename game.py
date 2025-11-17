@@ -1,10 +1,13 @@
 import pygame
 from setting import *
 from player import Player
+from enemy import Enemy
 from boss import BossEnemy
 from boss_subclasses import GrandBossEnemy, Stage1Boss
+from enemy_bullet import EnemyBullet
 from stage_manager import StageManager
 from support import draw_text
+from quadtree import Quadtree
 
 class Game:
 
@@ -16,6 +19,9 @@ class Game:
 
         #グループの作成
         self.create_group()
+
+        # 衝突判定用のQuadtreeを作成
+        self.quadtree = Quadtree(0, pygame.Rect(0, 0, GAME_AREA_WIDTH, screen_height))
 
         #自機
         self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group)
@@ -305,7 +311,8 @@ class Game:
         for obj in possible_collisions:
             # プレイヤー vs 敵本体
             if isinstance(obj, Enemy) and not isinstance(obj, BossEnemy):
-                if self.player.rect.colliderect(obj.rect):
+                # 円形当たり判定に変更
+                if self.player.pos.distance_to(obj.pos) < self.player.radius + obj.radius:
                     self.player.take_damage()
                     obj.kill()
                     return # 1フレームに1回だけダメージを受ける
@@ -325,8 +332,9 @@ class Game:
             self.quadtree.query(query_rect, possible_enemies)
 
             for enemy in possible_enemies:
-                if isinstance(enemy, Enemy): # BossEnemyもEnemyのサブクラス
-                    if bullet.rect.colliderect(enemy.rect):
+                # BossEnemyもEnemyのサブクラスなので、isinstance(enemy, Enemy)で判定
+                if isinstance(enemy, Enemy):
+                    if bullet.pos.distance_to(enemy.pos) < bullet.radius + enemy.radius:
                         enemy.take_damage(1)
                         bullet.kill()
                         break # 弾は1体の敵にしか当たらない

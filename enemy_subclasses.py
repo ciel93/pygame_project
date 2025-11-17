@@ -13,13 +13,21 @@ class FastEnemy(Enemy):
         self.health = 1         # 低HP
         self.score_value = 20   # FastEnemyのスコア
         
-        try:
-            pre = pygame.image.load('assets/img/enemy/fast.png')
+        image_path = 'assets/img/enemy/fast.png'
+        if image_path in Enemy._image_cache:
+            pre = Enemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                Enemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        
+        if pre:
             self.image = pygame.transform.scale(pre, (40, 40))
-        except Exception:
-            surf = pygame.Surface((40,40), pygame.SRCALPHA)
-            surf.fill(FAST_ENEMY_COLOR)
-            self.image = surf
+        else:
+            self.image = pygame.Surface((40,40), pygame.SRCALPHA)
+            self.image.fill(FAST_ENEMY_COLOR)
         self.rect = self.image.get_rect(center=self.rect.center)
         
         # 位置を浮動小数点で管理
@@ -103,13 +111,20 @@ class TankEnemy(Enemy):
         self.health = 6        # 高HP
         self.score_value = 30  # TankEnemyのスコア
 
-        try:
-            pre = pygame.image.load('assets/img/enemy/tank.png')
+        image_path = 'assets/img/enemy/tank.png'
+        if image_path in Enemy._image_cache:
+            pre = Enemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                Enemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        if pre:
             self.image = pygame.transform.scale(pre, (60, 60))
-        except Exception:
-            surf = pygame.Surface((60,60), pygame.SRCALPHA)
-            surf.fill(TANK_ENEMY_COLOR)
-            self.image = surf
+        else:
+            self.image = pygame.Surface((60,60), pygame.SRCALPHA)
+            self.image.fill(TANK_ENEMY_COLOR)
         # rect は親が作っているが再取得して中心を維持
         self.rect = self.image.get_rect(center=self.rect.center)
 
@@ -208,14 +223,20 @@ class WaveEnemy(Enemy):
         self.health = 2
         self.score_value = 25 # WaveEnemyのスコア
 
-        try:
-            # 新しい敵用の画像をロード（なければフォールバック）
-            pre = pygame.image.load('assets/img/enemy/wave.png')
+        image_path = 'assets/img/enemy/wave.png'
+        if image_path in Enemy._image_cache:
+            pre = Enemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                Enemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        if pre:
             self.image = pygame.transform.scale(pre, (45, 45))
-        except Exception:
-            surf = pygame.Surface((45, 45), pygame.SRCALPHA)
-            surf.fill(WAVE_ENEMY_COLOR)
-            self.image = surf
+        else:
+            self.image = pygame.Surface((45, 45), pygame.SRCALPHA)
+            self.image.fill(WAVE_ENEMY_COLOR)
         self.rect = self.image.get_rect(center=self.rect.center)
 
         # 位置を浮動小数点で管理
@@ -263,13 +284,20 @@ class HunterEnemy(Enemy):
         self.health = 4        # 少し高めのHP
         self.score_value = 40  # HunterEnemyのスコア
 
-        try:
-            pre = pygame.image.load('assets/img/enemy/hunter.png') # 新しい画像
+        image_path = 'assets/img/enemy/hunter.png'
+        if image_path in Enemy._image_cache:
+            pre = Enemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                Enemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        if pre:
             self.image = pygame.transform.scale(pre, (55, 55))
-        except Exception:
-            surf = pygame.Surface((55, 55), pygame.SRCALPHA)
-            surf.fill(HUNTER_ENEMY_COLOR) # 紫がかった色
-            self.image = surf
+        else:
+            self.image = pygame.Surface((55, 55), pygame.SRCALPHA)
+            self.image.fill(HUNTER_ENEMY_COLOR)
         self.rect = self.image.get_rect(center=self.rect.center)
 
         self.pos = pygame.math.Vector2(self.rect.center)

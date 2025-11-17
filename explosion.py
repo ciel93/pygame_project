@@ -2,13 +2,20 @@ import pygame
 from setting import *
 
 class Explosion(pygame.sprite.Sprite):
+    _image_cache = {}
+
     def __init__(self, groups, x, y):
         super().__init__(groups)
 
         #画像
         self.image_list = []
         for i in range(1):
-            image = pygame.image.load(f'assets/img/explosion/{i}.png')
+            path = f'assets/img/explosion/{i}.png'
+            if path in Explosion._image_cache:
+                image = Explosion._image_cache[path]
+            else:
+                image = pygame.image.load(path).convert_alpha()
+                Explosion._image_cache[path] = image
             self.image_list.append(image)
 
         self.index = 0
@@ -25,5 +32,5 @@ class Explosion(pygame.sprite.Sprite):
         else:
             self.kill()
 
-        def update(self):
-            self.animation()
+    def update(self):
+        self.animation()

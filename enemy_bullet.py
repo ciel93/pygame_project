@@ -131,25 +131,6 @@ class EnemyBullet(pygame.sprite.Sprite):
         if self.rect.top > screen_height or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > GAME_AREA_WIDTH:
             self.kill()
 
-    def collision_target(self):
-        # ターゲットグループに take_damage メソッドを持つスプライトが存在する場合のみ判定
-        if self.target_group and hasattr(self.target_group.sprite, 'take_damage'):
-            target = self.target_group.sprite
-            # 無敵状態でない場合のみ衝突判定
-            if not getattr(target, 'invincible', False):
-                # ターゲット中心取得（pos 優先）
-                if hasattr(target, 'pos'):
-                    target_center = pygame.math.Vector2(target.pos)
-                else:
-                    target_center = pygame.math.Vector2(target.rect.center)
-    
-                target_radius = getattr(target, 'radius', 20)
-    
-                # 円形当たり判定
-                if self.pos.distance_to(target_center) < (self.radius + target_radius):
-                    target.take_damage(1) # 1ダメージを与える
-                    self.kill()
-
     def update(self):
         # 凍結状態を先に更新
         self.update_frozen_state()
@@ -166,4 +147,3 @@ class EnemyBullet(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
 
         self.check_off_screen()
-        self.collision_target()

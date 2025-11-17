@@ -6,6 +6,9 @@ from item import Item
 from enemy_bullet import EnemyBullet
 
 class Enemy(pygame.sprite.Sprite):
+    # 画像をキャッシュするためのクラス変数
+    _image_cache = {}
+
     def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None):
         super().__init__(groups)
 
@@ -25,8 +28,14 @@ class Enemy(pygame.sprite.Sprite):
         self.fire_timer = 0
 
         #画像
-        self.pre_image = pygame.image.load('assets/img/enemy/0.png')
-        self.image = pygame.transform.scale(self.pre_image,(50, 50))
+        image_path = 'assets/img/enemy/0.png'
+        if image_path in Enemy._image_cache:
+            self.pre_image = Enemy._image_cache[image_path]
+        else:
+            self.pre_image = pygame.image.load(image_path).convert_alpha()
+            Enemy._image_cache[image_path] = self.pre_image
+        
+        self.image = pygame.transform.scale(self.pre_image, (50, 50))
         self.rect = self.image.get_rect(center = (x, y))
         self.pos = pygame.math.Vector2(x, y)
         self.radius = 30
@@ -115,7 +124,8 @@ class Enemy(pygame.sprite.Sprite):
                     Item(self.item_group, self.rect.center, item_type)
             explosion = Explosion(self.explosion_group, self.rect.centerx, self.rect.centery)
             self.explosion = True
-        elif self.explosion == True:
+        # 爆発アニメーションが完了したら（explosion_groupが空になったら）自身を消滅させる
+        elif self.explosion and not self.explosion_group:
             self.kill()
     
     def take_damage(self, damage_amount=1):
@@ -129,7 +139,7 @@ class Enemy(pygame.sprite.Sprite):
         if not move_override:
             self.move()
         # self.collision_bullet() # Quadtreeで処理するためコメントアウト
-        self.check_off_screen()
+        self.check_off_screen() # 画面外に出たかチェック
         self.check_death()
 
          # 敵弾の生成はここで行うが、共有グループの update/draw は Game 側で行う

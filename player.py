@@ -5,6 +5,9 @@ from boss import BossEnemy
 from bomb import MasterSpark
 
 class Player(pygame.sprite.Sprite):
+    # 画像をキャッシュするためのクラス変数
+    _image_cache = {}
+
     def __init__(self, groups, x, y, enemy_group, enemy_bullets_group=None, item_group=None):
         super().__init__(groups)
 
@@ -20,8 +23,13 @@ class Player(pygame.sprite.Sprite):
 
         #画像
         self.image_list = []
-        for i in range(3):
-            image = pygame.image.load(f'assets/img/player/{i}.png').convert_alpha()
+        for i in range(3): # 0: center, 1: left, 2: right
+            path = f'assets/img/player/{i}.png'
+            if path in Player._image_cache:
+                image = Player._image_cache[path]
+            else:
+                image = pygame.image.load(path).convert_alpha()
+                Player._image_cache[path] = image
             self.image_list.append(pygame.transform.scale(image, (50, 50)))
         self.index = 0
         self.image = self.image_list[self.index]
@@ -48,7 +56,7 @@ class Player(pygame.sprite.Sprite):
         # ホーミング弾専用のタイマーとクールダウン
         self.homing_timer = 0
         self.homing_cooldown = 20 # 通常弾の2倍の間隔
-        self.max_power = 5   # 最大パワーレベル
+        self.max_power = 7   # 最大パワーレベルを7に引き上げ
 
         #体力
         self.health = 3
@@ -158,8 +166,25 @@ class Player(pygame.sprite.Sprite):
         if self.power_level >= 5 and key[pygame.K_z]:
             # ホーミング弾のクールダウンが終わっていれば発射
             if self.homing_timer == 0:
-                HomingBullet(self.bullet_group, self.rect.left, self.rect.centery, self.enemy_group)
-                HomingBullet(self.bullet_group, self.rect.right, self.rect.centery, self.enemy_group)
+                if self.power_level == 5:
+                    # レベル5: 2発
+                    HomingBullet(self.bullet_group, self.rect.left, self.rect.centery, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.right, self.rect.centery, self.enemy_group)
+                elif self.power_level == 6:
+                    # レベル6: 4発
+                    HomingBullet(self.bullet_group, self.rect.left - 10, self.rect.centery, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.right + 10, self.rect.centery, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.left, self.rect.top, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.right, self.rect.top, self.enemy_group)
+                elif self.power_level >= 7:
+                    # レベル7以上: 6発
+                    HomingBullet(self.bullet_group, self.rect.left - 15, self.rect.centery, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.right + 15, self.rect.centery, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.left, self.rect.top, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.right, self.rect.top, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.centerx - 15, self.rect.top - 10, self.enemy_group)
+                    HomingBullet(self.bullet_group, self.rect.centerx + 15, self.rect.top - 10, self.enemy_group)
+
                 self.homing_timer = self.homing_cooldown # タイマーをリセット
 
         if self.homing_timer > 0:

@@ -25,18 +25,23 @@ class BossEnemy(Enemy):
         self.laser_sweep_dir = 1 # 薙ぎ払う方向 (1:時計回り, -1:反時計回り)
         # レーヴァテイン用のパラメータ
         self.laevateinn_dir = random.choice([-1, 1])
-        try:
-            pre = pygame.image.load('assets/img/enemy/boss.png').convert_alpha()
-            # 横幅を基準に、元のアスペクト比を維持してリサイズ
-            new_width = 120
-            aspect_ratio = pre.get_height() / pre.get_width()
-            new_height = int(new_width * aspect_ratio)
-            self.image = pygame.transform.scale(pre, (new_width, new_height))
-        except Exception:
-            # 画像がない場合のフォールバック
-            surf = pygame.Surface((120,120), pygame.SRCALPHA)
-            surf.fill(BOSS_ENEMY_COLOR)
-            self.image = surf
+        
+        image_path = 'assets/img/enemy/boss.png'
+        if image_path in Enemy._image_cache:
+            pre = Enemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                Enemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        
+        new_width = 120
+        aspect_ratio = pre.get_height() / pre.get_width() if pre else 1
+        new_height = int(new_width * aspect_ratio)
+        self.image = pygame.transform.scale(pre, (new_width, new_height)) if pre else pygame.Surface((new_width, new_height), pygame.SRCALPHA)
+        if not pre: self.image.fill(BOSS_ENEMY_COLOR)
+
         self.rect = self.image.get_rect(center=self.rect.center)
         self.radius = self.rect.width / 2 * 0.9 # 当たり判定を画像の半径に合わせる
 
@@ -85,6 +90,10 @@ class BossEnemy(Enemy):
         self.rect.center = self.pos
 
     def create_pattern(self):
+        # ボスが倒されたら弾の生成を停止
+        if not self.alive:
+            return
+
         # HPが半分以下になったら発狂モードに移行
         if not self.enrage_mode and self.health <= self.max_health / 2:
             self.enrage_mode = True
