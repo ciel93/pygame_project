@@ -235,6 +235,19 @@ class Game:
             # ボス撃破時の弾消し＆スコア加算
             self.check_boss_defeat_and_convert_bullets()
 
+            # --- Quadtreeを使った衝突判定 ---
+            # 1. Quadtreeをクリア
+            self.quadtree.clear()
+            
+            # 2. 衝突判定の対象となるオブジェクトをすべて挿入
+            for sprite in self.player_group: self.quadtree.insert(sprite)
+            for sprite in self.enemy_group: self.quadtree.insert(sprite)
+            for sprite in self.player.bullet_group: self.quadtree.insert(sprite)
+            for sprite in self.enemy_bullets: self.quadtree.insert(sprite)
+
+            # 3. 衝突判定の実行
+            self.check_collisions_with_quadtree()
+
             # ボム発動中は敵弾を消去
             if self.player and self.player.bomb_active:
                 self.enemy_bullets.empty()
@@ -279,6 +292,44 @@ class Game:
         # ゲームオーバーの判定と描画、およびリセット処理
         self.player_death()
         self.reset()
+
+    def check_collisions_with_quadtree(self):
+        """Quadtreeを使用して衝突判定を行う"""
+        if not self.player or self.player.invincible or self.player.bomb_active:
+            return
+
+        # プレイヤー vs 敵弾/敵本体
+        possible_collisions = set()
+        self.quadtree.query(self.player.rect, possible_collisions)
+        
+        for obj in possible_collisions:
+            # プレイヤー vs 敵本体
+            if isinstance(obj, Enemy) and not isinstance(obj, BossEnemy):
+                if self.player.rect.colliderect(obj.rect):
+                    self.player.take_damage()
+                    obj.kill()
+                    return # 1フレームに1回だけダメージを受ける
+            
+            # プレイヤー vs 敵弾
+            if isinstance(obj, EnemyBullet):
+                if self.player.pos.distance_to(obj.pos) < self.player.radius + obj.radius:
+                    self.player.take_damage()
+                    obj.kill() # TODO: オブジェクトプーリングを実装する場合、プールに戻す
+                    return # 1フレームに1回だけダメージを受ける
+
+        # プレイヤーの弾 vs 敵
+        for bullet in self.player.bullet_group:
+            possible_enemies = set()
+            # 弾の周辺だけをクエリする
+            query_rect = bullet.rect.inflate(20, 20)
+            self.quadtree.query(query_rect, possible_enemies)
+
+            for enemy in possible_enemies:
+                if isinstance(enemy, Enemy): # BossEnemyもEnemyのサブクラス
+                    if bullet.rect.colliderect(enemy.rect):
+                        enemy.take_damage(1)
+                        bullet.kill()
+                        break # 弾は1体の敵にしか当たらない
 
     def check_item_collision(self):
         """プレイヤーとアイテムの衝突をチェックし、効果を適用する"""

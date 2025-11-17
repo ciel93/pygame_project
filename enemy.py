@@ -128,7 +128,7 @@ class Enemy(pygame.sprite.Sprite):
     def update(self, move_override=False):
         if not move_override:
             self.move()
-        self.collision_bullet()
+        # self.collision_bullet() # Quadtreeで処理するためコメントアウト
         self.check_off_screen()
         self.check_death()
 

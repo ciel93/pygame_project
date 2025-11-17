@@ -4,6 +4,9 @@ import math
 
 class EnemyBullet(pygame.sprite.Sprite):
     """敵の弾（direction プロパティ対応）"""
+    # 画像をキャッシュするためのクラス変数
+    _image_cache = {}
+
     def __init__(self, groups, x, y, target_group, speed=1, direction=None, radius=8, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal', frozen_duration=0):
         super().__init__(groups)
         self.screen = pygame.display.get_surface()
@@ -24,37 +27,46 @@ class EnemyBullet(pygame.sprite.Sprite):
         if self.direction.length_squared() != 0:
             self.direction = self.direction.normalize()
 
-        # 画像の読み込み
-        try:
-            # bullet_type に応じて画像を切り替える
-            if bullet_type == 'laser':
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/laser.png').convert_alpha()
-            elif bullet_type == 'vortex_rev': # 反時計回り渦弾
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/1.png').convert_alpha()
-            elif bullet_type == 'vortex':
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/0.png').convert_alpha()
-            elif bullet_type == 'homing':
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/2.png').convert_alpha()
-            elif bullet_type == 'ice':
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/4.png').convert_alpha()
-            elif bullet_type == 'freeze':
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/freeze.png').convert_alpha()
-            else:
-                self.original_image = pygame.image.load('assets/img/enemy_bullet/0.png').convert_alpha()
-        except Exception:
-            # 画像がない場合の代替処理
-            if bullet_type == 'laser':
-                # レーザーの場合は細長い矩形を生成
-                self.original_image = pygame.Surface((int(radius * 2), int(length if length else radius * 15)), pygame.SRCALPHA)
-                self.original_image.fill(color)
-            elif bullet_type == 'freeze':
-                # 氷弾の代替画像（氷の結晶のような形）
-                self.original_image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-                pygame.draw.circle(self.original_image, (180, 220, 255), (radius, radius), radius)
-                pygame.draw.circle(self.original_image, WHITE, (radius, radius), radius, 2)
-            else:
-                self.original_image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-                pygame.draw.circle(self.original_image, color, (radius, radius), radius)
+        # 画像の読み込み（キャッシュを利用）
+        image_key = (bullet_type, radius, length, tuple(color) if bullet_type in ['laser', 'freeze'] or 'fallback' in bullet_type else None)
+        if image_key in EnemyBullet._image_cache:
+            self.original_image = EnemyBullet._image_cache[image_key]
+        else:
+            image_loaded = False
+            try:
+                # bullet_typeとファイル名のマッピング
+                image_map = {
+                    'laser': 'laser.png',
+                    'vortex_rev': '1.png',
+                    'vortex': '0.png',
+                    'homing': '2.png',
+                    'ice': '4.png',
+                    'freeze': 'freeze.png',
+                    'normal': '0.png'
+                }
+                # マップにない場合は 'normal' の画像を使用
+                filename = image_map.get(bullet_type, image_map['normal'])
+                filepath = f'assets/img/enemy_bullet/{filename}'
+                self.original_image = pygame.image.load(filepath).convert_alpha()
+                image_loaded = True
+            except Exception:
+                # 画像読み込みに失敗した場合、代替描画へ
+                image_loaded = False
+
+            if not image_loaded:
+                # 画像がない場合の代替処理
+                if bullet_type == 'laser':
+                    self.original_image = pygame.Surface((int(radius * 2), int(length if length else radius * 15)), pygame.SRCALPHA)
+                    self.original_image.fill(color)
+                elif bullet_type == 'freeze':
+                    self.original_image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                    pygame.draw.circle(self.original_image, (180, 220, 255), (radius, radius), radius)
+                    pygame.draw.circle(self.original_image, WHITE, (radius, radius), radius, 2)
+                else:
+                    self.original_image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                    pygame.draw.circle(self.original_image, color, (radius, radius), radius)
+            
+            EnemyBullet._image_cache[image_key] = self.original_image
 
         # lengthが指定されていれば細長い矩形に、なければ円形にサイズ調整
         if length:
@@ -75,6 +87,30 @@ class EnemyBullet(pygame.sprite.Sprite):
         # 凍結状態のパラメータ
         self.is_frozen = frozen_duration > 0
         self.frozen_timer = frozen_duration
+
+    def reset(self, x, y, target_group, speed=1, direction=None, radius=8, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal', frozen_duration=0):
+        """Resets an existing bullet from the pool."""
+        self.pos = pygame.math.Vector2(x, y)
+        self.rect.center = self.pos
+        self.speed = speed
+        self.target_group = target_group
+        self.bullet_type = bullet_type
+
+        if direction is None:
+            self.direction = pygame.math.Vector2(0, 1)
+        else:
+            self.direction = pygame.math.Vector2(direction).normalize()
+
+        # Reset frozen state
+        self.is_frozen = frozen_duration > 0
+        self.frozen_timer = frozen_duration
+
+        # NOTE: We don't need to reload the image, as it's already on the object.
+        # If bullet appearance could change on reset, you would handle that here.
+        # For simplicity, we assume a pool per bullet type, so the image is correct.
+
+        # Add the bullet back to the active sprite groups.
+        # This will be handled by the pool manager.
 
     def move(self):
         # 凍結中は移動しない

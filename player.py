@@ -264,7 +264,7 @@ class Player(pygame.sprite.Sprite):
         self.cooldown_bullet()
         self.cooldown_bomb()
         self.fire_homing_bullets()
-        self.collision_enemy() # 敵との衝突判定は残す
+        # self.collision_enemy() # Quadtreeで処理するためコメントアウト
         self.attract_items()
         self.update_invincibility()
         self.check_death()
