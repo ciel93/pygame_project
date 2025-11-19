@@ -10,8 +10,8 @@ class BossEnemy(Enemy):
     def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
         super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 1.0
-        self.health = 150
-        self.max_health = 150
+        self.health = 250
+        self.max_health = 250
         self.pattern_timer = 0
         self.pattern_change_time = 240 # パターン切替時間（フレーム数）
         self.score_value = 100 # ボスのスコア
@@ -309,22 +309,28 @@ class BossEnemy(Enemy):
 
         # フェーズ2: 薙ぎ払い
         elif self.pattern_timer < pre_action_duration + (self.pattern_change_time * 0.6):
-            self.image = self.original_image.copy() # 色を元に戻す
-            if (self.pattern_timer - pre_action_duration) % 10 == 0: # 間隔を広げる
-                progress = (self.pattern_timer - pre_action_duration) / (self.pattern_change_time * 0.6)
-                angle_deg = 90 - (80 * progress * self.laevateinn_dir)
-                angle_rad = math.radians(angle_deg)
-                direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
+            self.image = self.original_image.copy()  # 色を元に戻す
+            progress = (self.pattern_timer - pre_action_duration) / (self.pattern_change_time * 0.6)
+            angle_deg = 90 - (80 * progress * self.laevateinn_dir)
+            angle_rad = math.radians(angle_deg)
+            direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
 
-                sword_length = 24 # 弾数を増やす
+            # 薙ぎ払いレーザーの描画
+            if (self.pattern_timer - pre_action_duration) % 4 == 0:
+                laser_bullet = self.enemy_bullet_pool.get() # プールから弾を取得
+                laser_bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0, direction=direction, radius=20, length=500, color=(255, 100, 100, 150), bullet_type='laser', frozen_duration=4)
+
+            # レーザーの軌跡に弾を生成
+            if (self.pattern_timer - pre_action_duration) % 8 == 0:
+                sword_length = 24  # 弾数
                 for i in range(sword_length):
-                    dist = i * 18 # 弾の間隔を狭める
+                    dist = i * 18  # 弾の間隔
                     pos = pygame.math.Vector2(self.rect.center) + direction * dist
-                    speed = 1.8 + (i / sword_length) * 2.5 # 弾速を少し遅くする
-                    radius = 6 + (i / sword_length) * 8 # 弾を小さくする
-                    red_val = 150 + (i / sword_length) * 105 # red_valを定義
+                    speed = 1.8 + (i / sword_length) * 2.5
+                    radius = 6 + (i / sword_length) * 8
+                    red_val = 150 + (i / sword_length) * 105
                     bullet = self.enemy_bullet_pool.get()
-                    bullet.reset(pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
+                    bullet.reset(pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20), frozen_duration=4)
         # フェーズ3: 横移動しながら剣を突き出す
         else:
             self.image = self.original_image.copy() # 色を元に戻す

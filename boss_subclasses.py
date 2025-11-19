@@ -83,8 +83,8 @@ class Stage1Boss(BossEnemy):
         super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         
         # ステージ1ボス専用のパラメータで上書き
-        self.health = 100
-        self.max_health = 100
+        self.health = 180
+        self.max_health = 180
         self.score_value = 80
         
         try:
@@ -139,8 +139,8 @@ class Stage2MidBoss(BossEnemy):
         super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         
         # ステージ2中ボス専用のパラメータ
-        self.health = 180
-        self.max_health = 180
+        self.health = 280
+        self.max_health = 280
         self.score_value = 150
         
         try:

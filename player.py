@@ -1,5 +1,7 @@
 import pygame
 from setting import *
+from item import Item
+import random
 from bullet import Bullet, HomingBullet
 from boss import BossEnemy
 from bomb import MasterSpark
@@ -72,6 +74,7 @@ class Player(pygame.sprite.Sprite):
         self.bomb_active = False
         self.bomb_cooldown = 30 # ボム使用後の短いクールダウン
         self.bomb_timer = 0
+        self.bomb_just_activated = False # ボムが発動された瞬間を検知するフラグ
 
         # 無敵時間
         self.invincible = False
@@ -108,7 +111,7 @@ class Player(pygame.sprite.Sprite):
                 self.index = 0
                 self.image = self.image_list[self.index]
 
-        if key[pygame.K_z] and self.fire == False:
+        if key[pygame.K_z] and not self.fire and not self.bomb_active:
             # パワーレベルに応じて弾を発射
             if self.power_level == 1:
                 bullet = self.bullet_pool.get()
@@ -156,6 +159,7 @@ class Player(pygame.sprite.Sprite):
         self.bombs -= 1
         self.bomb_active = True
         self.bomb_timer = self.bomb_cooldown
+        self.bomb_just_activated = True # ボムが発動されたことを示すフラグを立てる
         MasterSpark(self.bomb_group, self)
 
     def cooldown_bullet(self):
@@ -175,7 +179,7 @@ class Player(pygame.sprite.Sprite):
         """ホーミング弾を専用のクールダウンで発射する"""
         key = pygame.key.get_pressed()
         # パワーレベルが5以上で、Zキーが押されている場合
-        if self.power_level >= 5 and key[pygame.K_z]:
+        if self.power_level >= 5 and key[pygame.K_z] and not self.bomb_active:
             # ホーミング弾のクールダウンが終わっていれば発射
             if self.homing_timer == 0:
                 if self.power_level == 5:
@@ -266,24 +270,42 @@ class Player(pygame.sprite.Sprite):
                         break # 複数の弾と同時に当たらないようにループを抜ける
 
     def take_damage(self, damage_amount=1):
-        """ダメージを受けて無敵状態を開始する"""
+        """ダメージを受けて無敵状態を開始し、アイテムをドロップする"""
         self.health -= damage_amount
-        # パワーレベルを1に戻す
-        self.power_level = 1
-        self.invincible = True
-        self.invincible_timer = pygame.time.get_ticks()
+
         if self.health <= 0:
             self.alive = False
+        else:
+            # HPが残っている場合のみ、パワーダウン、無敵化、アイテムドロップを行う
+            self.power_level = 1
+            self.invincible = True
+            self.invincible_timer = pygame.time.get_ticks()
 
-    def attract_items(self):
-        """画面上部でアイテムを吸い込む"""
-        # プレイヤーが画面の上端から30ピクセル以内にいる場合
-        if self.rect.top < 30:
+            # ダメージ時にパワーアイテムをドロップ
+            if self.item_group is not None:
+                num_items_to_drop = 5 #ドロップするアイテムの数
+                spawn_offset_radius = 5 # 自機からアイテムがドロップする距離を近づける
+                for i in range(num_items_to_drop):
+                    # 360度ランダムな方向を決定
+                    angle = random.uniform(0, 360)
+                    direction = pygame.math.Vector2(1, 0).rotate(angle)
+
+                    # 飛び散るための初速を決定
+                    speed = random.uniform(3, 7) # 飛び散る初速
+                    velocity = direction * speed
+                    
+                    # プレイヤーの中心から少し離れた位置に、初速をつけてアイテムを生成
+                    spawn_pos = pygame.math.Vector2(self.rect.center) + direction * spawn_offset_radius
+                    Item(self.item_group, spawn_pos, 'power', initial_velocity=velocity, collision_cooldown=10)
+
+    def attract_items(self, attraction_area_height=150):
+        """画面上部の一定範囲でアイテムを吸い込む"""
+        # プレイヤーが画面の上端から指定された範囲内にいる場合
+        if self.rect.top < attraction_area_height:
             if self.item_group is not None:
                 for item in self.item_group:
                     # アイテムの吸い込みフラグを立てる
                     item.is_attracted = True
-
     
     def check_death(self):
         if self.alive == False:
@@ -311,6 +333,6 @@ class Player(pygame.sprite.Sprite):
         self.cooldown_bomb()
         self.fire_homing_bullets()
         # self.collision_enemy() # Quadtreeで処理するためコメントアウト
-        self.attract_items()
+        self.attract_items() # アイテム吸い込み処理を再度有効化
         self.update_invincibility()
         self.check_death()

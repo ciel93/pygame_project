@@ -237,10 +237,15 @@ class Game:
     def run(self, clock):
         self.scroll_bg()
         
-        if self.paused:
+        if self.game_over:
+            # ゲームオーバー画面の描画
+            draw_text(self.screen, 'GAME OVER', GAME_AREA_WIDTH // 2, screen_height // 2, 75, RED)
+            draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 100, 50, RED)
+        elif self.paused:
             # ポーズ中は描画のみ行い、更新処理をスキップ
             draw_text(self.screen, 'PAUSED', GAME_AREA_WIDTH // 2, screen_height // 2, 75, WHITE)
         else:
+            # --- 通常のゲームループ ---
             # ステージ管理と敵生成
             result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
             if result == "game_clear":
@@ -278,7 +283,8 @@ class Game:
             # 2. 衝突判定の対象となるオブジェクトをすべて挿入
             for enemy in self.enemy_group: self.enemy_quadtree.insert(enemy)
             for bullet in self.enemy_bullets: self.enemy_bullet_quadtree.insert(bullet)
-            for bullet in self.player.bullet_group: self.player_bullet_quadtree.insert(bullet)
+            if self.player:
+                for bullet in self.player.bullet_group: self.player_bullet_quadtree.insert(bullet)
 
             # 3. 衝突判定の実行
             self.check_collisions_with_quadtree()
@@ -290,8 +296,12 @@ class Game:
             self.check_enemy_bullets_off_screen()
 
             # ボム発動中は敵弾を消去
-            if self.player and self.player.bomb_active:
-                self.enemy_bullets.empty()
+            if self.player and self.player.bomb_active and getattr(self.player, 'bomb_just_activated', False):
+                bullets_cleared = len(self.enemy_bullets)
+                score_per_bullet = 50  # 弾1つあたりのスコア
+                self.score += bullets_cleared * score_per_bullet
+                self.enemy_bullets.empty() # 画面上のすべての敵弾を消去
+                self.player.bomb_just_activated = False # フラグをリセット
 
         # Quadtreeの描画（デバッグ用）
         if self.show_quadtree:
@@ -335,7 +345,7 @@ class Game:
             draw_text(self.screen, 'GAME CLEAR', GAME_AREA_WIDTH // 2, screen_height //2 ,75 , GREEN)
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
 
-        # ゲームオーバーの判定と描画、およびリセット処理
+        # プレイヤーの死亡判定とリセット処理
         self.player_death()
         self.reset()
 
@@ -369,6 +379,7 @@ class Game:
             for enemy in possible_enemies:
                 if bullet.pos.distance_to(enemy.pos) < bullet.radius + enemy.radius:
                     enemy.take_damage(1)
+                    self.score += 10 # 弾が命中するたびに10点加算
                     # bullet.kill() の代わりにプールに戻す
                     if isinstance(bullet, HomingBullet):
                         self.homing_bullet_pool.put(bullet)
@@ -382,6 +393,10 @@ class Game:
             # spritecollideは衝突したスプライトのリストを返す。第三引数Trueでアイテムは自動で消える。
             collided_items = pygame.sprite.spritecollide(self.player, self.item_group, True)
             for item in collided_items:
+                # アイテムにクールダウンが設定されていれば、取得せずに再度グループに戻す
+                if getattr(item, 'collision_cooldown', 0) > 0:
+                    self.item_group.add(item) # グループに戻す
+                    continue # 次のアイテムへ
                 if item.item_type == 'power':
                     if self.player.power_level < self.player.max_power:
                         self.player.power_level += 1
@@ -393,13 +408,14 @@ class Game:
 
     def check_player_bullets_off_screen(self):
         """画面外に出たプレイヤーの弾をプールに戻す"""
-        for bullet in self.player.bullet_group:
-            if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
-               bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
-                if isinstance(bullet, HomingBullet):
-                    self.homing_bullet_pool.put(bullet)
-                else:
-                    self.bullet_pool.put(bullet)
+        if self.player:
+            for bullet in self.player.bullet_group:
+                if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
+                   bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
+                    if isinstance(bullet, HomingBullet):
+                        self.homing_bullet_pool.put(bullet)
+                    else:
+                        self.bullet_pool.put(bullet)
 
     def check_enemy_bullets_off_screen(self):
         """画面外に出た敵弾をプールに戻す"""

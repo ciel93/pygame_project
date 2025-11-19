@@ -143,7 +143,10 @@ class StageManager:
     def create_enemy(self, wave):
         """指定されたウェーブの敵を1体生成する"""
         spawn_type = wave['type']
-        player = self.player_group.sprite
+        # プレイヤーが存在しない場合は敵を生成しない
+        if not self.player_group.sprite:
+            return
+        player = self.player_group.sprite # プレイヤーの存在をチェックした後に参照
         enemy_bullets = player.enemy_bullets # Playerが持つ共有グループ
 
         if spawn_type == 'wave':

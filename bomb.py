@@ -32,7 +32,7 @@ class MasterSpark(pygame.sprite.Sprite):
         # レーザー全体の描画領域と当たり判定用のRect
         # 幅は画像の最大幅に合わせる
         self.image = pygame.Surface((412, screen_height), pygame.SRCALPHA)
-        self.rect = self.image.get_rect(midbottom=self.player.rect.midtop)
+        self.rect = self.image.get_rect(centerx=self.player.rect.centerx, bottom=self.player.rect.centery)
 
         # 当たり判定用のマスク
         self.mask = pygame.mask.from_surface(self.image)
@@ -44,7 +44,7 @@ class MasterSpark(pygame.sprite.Sprite):
             return
 
         # プレイヤーに追従
-        self.rect.midbottom = self.player.rect.midtop
+        self.rect.centerx, self.rect.bottom = self.player.rect.centerx, self.player.rect.centery
 
         # レーザーの描画
         self.draw_laser()
