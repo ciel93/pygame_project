@@ -79,6 +79,7 @@ class Game:
         self.grand_boss_defeated = False # 大ボスを倒したかどうかのフラグ
         self.paused = False # ポーズ状態のフラグ
         self.show_quadtree = False # Quadtreeの表示フラグ
+        self.show_enemy_hitbox = False # 敵弾の当たり判定表示フラグ
 
     def create_group(self):
         self.player_group = pygame.sprite.GroupSingle()
@@ -325,6 +326,11 @@ class Game:
             pygame.draw.circle(self.screen, GREEN, (int(self.player.pos.x), int(self.player.pos.y)), self.player.radius, 1)
             pygame.draw.circle(self.screen, RED, (int(self.player.pos.x), int(self.player.pos.y)), 2)
 
+        # 敵弾の当たり判定を描画 (デバッグ用)
+        if self.show_enemy_hitbox:
+            for bullet in self.enemy_bullets:
+                pygame.draw.circle(self.screen, RED, (int(bullet.pos.x), int(bullet.pos.y)), bullet.radius, 1)
+
 
         # ボスがいればHPバーを描画
         for enemy in self.enemy_group:
@@ -366,9 +372,15 @@ class Game:
         possible_enemy_bullets = set()
         self.enemy_bullet_quadtree.query(self.player.rect, possible_enemy_bullets)
         for bullet in possible_enemy_bullets:
-            if self.player.pos.distance_to(bullet.pos) < self.player.radius + bullet.radius:
+            # レーザー弾はマスクで、それ以外は円で判定
+            if getattr(bullet, 'bullet_type', 'normal') == 'laser':
+                if pygame.sprite.collide_mask(self.player, bullet):
+                    self.player.take_damage()
+                    self.enemy_bullet_pool.put(bullet)
+                    return
+            elif self.player.pos.distance_to(bullet.pos) < self.player.radius + bullet.radius:
                 self.player.take_damage()
-                self.enemy_bullet_pool.put(bullet) # プールに戻す
+                self.enemy_bullet_pool.put(bullet)
                 return
 
         # プレイヤーの弾 vs 敵

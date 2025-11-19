@@ -42,6 +42,9 @@ while run:
             # QキーでQuadtreeの表示を切り替える
             if event.key == pygame.K_q:
                 game.show_quadtree = not game.show_quadtree
+            # Jキーで敵弾の当たり判定表示を切り替える
+            if event.key == pygame.K_j:
+                game.show_enemy_hitbox = not game.show_enemy_hitbox
     #画面の更新
     pygame.display.flip()
     clock.tick(FPS)

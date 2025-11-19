@@ -7,7 +7,7 @@ class EnemyBullet(pygame.sprite.Sprite):
     # 画像をキャッシュするためのクラス変数
     _image_cache = {}
 
-    def __init__(self, groups, x, y, target_group, speed=1, direction=None, radius=8, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal', frozen_duration=0):
+    def __init__(self, groups, x, y, target_group, speed=1, direction=None, radius=8, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal', frozen_duration=0, lifetime=None):
         super().__init__(groups)
         self.screen = pygame.display.get_surface()
 
@@ -87,8 +87,12 @@ class EnemyBullet(pygame.sprite.Sprite):
         # 凍結状態のパラメータ
         self.is_frozen = frozen_duration > 0
         self.frozen_timer = frozen_duration
+        
+        # 弾の寿命
+        self.lifetime = lifetime
+        self.has_lifetime = lifetime is not None
 
-    def reset(self, x, y, target_group, speed=1, direction=None, radius=8, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal', frozen_duration=0):
+    def reset(self, x, y, target_group, speed=1, direction=None, radius=8, color=ENEMY_BULLET_COLOR, length=None, bullet_type='normal', frozen_duration=0, lifetime=None):
         """オブジェクトプールから再利用される際に状態をリセットする"""
         self.pos = pygame.math.Vector2(x, y)
         self.rect.center = self.pos
@@ -109,6 +113,43 @@ class EnemyBullet(pygame.sprite.Sprite):
 
         self.is_frozen = frozen_duration > 0
         self.frozen_timer = frozen_duration
+
+        # 寿命をリセット
+        self.lifetime = lifetime
+        self.has_lifetime = lifetime is not None
+
+        # 画像の再生成とスケーリング
+        image_key = (bullet_type, radius, length, tuple(color) if bullet_type in ['laser', 'freeze'] or 'fallback' in bullet_type else None)
+        if image_key in EnemyBullet._image_cache:
+            self.original_image = EnemyBullet._image_cache[image_key]
+        else:
+            loaded_image = None
+            try:
+                if bullet_type == 'laser':
+                    loaded_image = pygame.image.load('assets/img/enemy_bullet/laser.png').convert_alpha()
+                elif bullet_type == 'vortex_rev':
+                    loaded_image = pygame.image.load('assets/img/enemy_bullet/1.png').convert_alpha()
+                elif bullet_type == 'vortex':
+                    loaded_image = pygame.image.load('assets/img/enemy_bullet/0.png').convert_alpha()
+                elif bullet_type == 'homing':
+                    loaded_image = pygame.image.load('assets/img/enemy_bullet/2.png').convert_alpha()
+                elif bullet_type == 'ice':
+                    loaded_image = pygame.image.load('assets/img/enemy_bullet/4.png').convert_alpha()
+                else:
+                    loaded_image = pygame.image.load('assets/img/enemy_bullet/0.png').convert_alpha()
+                self.original_image = loaded_image
+            except Exception:
+                # フォールバック処理は __init__ と同様のため省略
+                self.original_image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(self.original_image, color, (radius, radius), radius)
+            EnemyBullet._image_cache[image_key] = self.original_image
+
+        if length:
+            width, height = int(radius * 2), int(length)
+        else:
+            width = height = int(radius * 2)
+        self.original_image = pygame.transform.scale(self.original_image, (width, height))
+        self.image = self.original_image.copy()
         # 画像は__init__でキャッシュされているものを利用するため、ここでは変更しない
         # 必要であれば、ここで self.image = self.original_image.copy() などでリセット
 
@@ -154,16 +195,33 @@ class EnemyBullet(pygame.sprite.Sprite):
         # 凍結状態を先に更新
         self.update_frozen_state()
         if self.is_frozen:
+            # 凍結中でも寿命は減らす
+            if self.has_lifetime:
+                self.lifetime -= 1
+                if self.lifetime <= 0:
+                    self.kill()
+                    return
             return # 凍結中はここで処理を中断
         self.move()
 
         # 渦巻き弾(vortex)や氷弾(ice)は円形なので、負荷の高い回転処理をスキップする
-        if not self.bullet_type.startswith('vortex') and self.bullet_type != 'ice':
+        if self.bullet_type == 'laser':
+            # レーザーの場合：根本を軸に回転させる
+            angle = -self.direction.angle_to(pygame.math.Vector2(0, 1))
+            self.image = pygame.transform.rotate(self.original_image, angle)
+            self.rect = self.image.get_rect(midbottom=self.pos)
+        elif not self.bullet_type.startswith('vortex') and self.bullet_type != 'ice':
             # 進行方向に応じて画像を回転
             angle = -self.direction.angle_to(pygame.math.Vector2(0, 1))
             # 毎フレーム回転させると画質が劣化するので、元の画像を保持し、それを回転させる
             self.image = pygame.transform.rotate(self.original_image, angle) 
-            self.rect = self.image.get_rect(center=self.rect.center)
+            self.rect = self.image.get_rect(center=self.pos)
 
         self.check_off_screen()
-        self.collision_target()
+        # self.collision_target() # 衝突判定はGameクラスのQuadtreeで行うためコメントアウト
+
+        # 寿命を更新
+        if self.has_lifetime:
+            self.lifetime -= 1
+            if self.lifetime <= 0:
+                self.kill()

@@ -40,6 +40,7 @@ class Player(pygame.sprite.Sprite):
         self.index = 0
         self.image = self.image_list[self.index]
        # 当たり判定用の円の半径
+        self.mask = pygame.mask.from_surface(self.image)
         self.radius = 5  # プレイヤーの当たり判定サイズ
         self.pos = pygame.math.Vector2(x, y)
         self.rect = self.image.get_rect(center=(x, y))
@@ -100,16 +101,19 @@ class Player(pygame.sprite.Sprite):
             if self.index != 1:
                 self.index = 1
                 self.image = self.image_list[self.index]
+                self.mask = pygame.mask.from_surface(self.image)
         elif key[pygame.K_RIGHT]:
             self.direction.x = 1
             if self.index != 2:
                 self.index = 2
                 self.image = self.image_list[self.index]
+                self.mask = pygame.mask.from_surface(self.image)
         else:
             self.direction.x = 0
             if self.index != 0:
                 self.index = 0
                 self.image = self.image_list[self.index]
+                self.mask = pygame.mask.from_surface(self.image)
 
         if key[pygame.K_z] and not self.fire and not self.bomb_active:
             # パワーレベルに応じて弾を発射
@@ -273,6 +277,10 @@ class Player(pygame.sprite.Sprite):
         """ダメージを受けて無敵状態を開始し、アイテムをドロップする"""
         self.health -= damage_amount
 
+        # 被弾時にホーミング弾を消去
+        for bullet in list(self.bullet_group):
+            if isinstance(bullet, HomingBullet):
+                bullet.kill()
         if self.health <= 0:
             self.alive = False
         else:
@@ -324,6 +332,7 @@ class Player(pygame.sprite.Sprite):
             else:
                 # 点滅処理
                 alpha = 255 if (now // 100) % 2 == 0 else 128
+                # self.image.set_alpha(alpha) # マスクが機能しなくなるためコメントアウト
                 self.image.set_alpha(alpha)
 
     def update(self):

@@ -264,7 +264,7 @@ class BossEnemy(Enemy):
     def _laser_sweep(self):
         """レーザーのように弾を薙ぎ払う新しいパターン"""
         # 弾の生成を16フレームに1回に調整（密度をさらに減らすため）
-        if self.pattern_timer % 16 == 0:
+        if self.pattern_timer % 32 == 0: # 生成間隔を32フレームに倍増
             speed = 2.0 # 弾速を遅くする
             
             # レーザーの角度を計算（度数法からラジアンに変換）
@@ -314,11 +314,6 @@ class BossEnemy(Enemy):
             angle_deg = 90 - (80 * progress * self.laevateinn_dir)
             angle_rad = math.radians(angle_deg)
             direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
-
-            # 薙ぎ払いレーザーの描画
-            if (self.pattern_timer - pre_action_duration) % 4 == 0:
-                laser_bullet = self.enemy_bullet_pool.get() # プールから弾を取得
-                laser_bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0, direction=direction, radius=20, length=500, color=(255, 100, 100, 150), bullet_type='laser', frozen_duration=4)
 
             # レーザーの軌跡に弾を生成
             if (self.pattern_timer - pre_action_duration) % 8 == 0:
