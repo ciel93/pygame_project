@@ -206,12 +206,12 @@ class EnemyBullet(pygame.sprite.Sprite):
 
         # 渦巻き弾(vortex)や氷弾(ice)は円形なので、負荷の高い回転処理をスキップする
         if self.bullet_type == 'laser':
-            # レーザーの場合：根本を軸に回転させる
+            # レーザーの場合：画像の底辺中央(midbottom)を基点として回転させる
             angle = -self.direction.angle_to(pygame.math.Vector2(0, 1))
             self.image = pygame.transform.rotate(self.original_image, angle)
             self.rect = self.image.get_rect(midbottom=self.pos)
         elif not self.bullet_type.startswith('vortex') and self.bullet_type != 'ice':
-            # 進行方向に応じて画像を回転
+            # それ以外の弾は、画像の中心を軸として進行方向に合わせて回転
             angle = -self.direction.angle_to(pygame.math.Vector2(0, 1))
             # 毎フレーム回転させると画質が劣化するので、元の画像を保持し、それを回転させる
             self.image = pygame.transform.rotate(self.original_image, angle) 

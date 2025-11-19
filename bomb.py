@@ -5,15 +5,17 @@ class MasterSpark(pygame.sprite.Sprite):
     _image_cache = {}
 
     """プレイヤーのボム（マスタースパーク）を表現するクラス"""
-    def __init__(self, groups, player):
+    def __init__(self, groups, player, game):
         super().__init__(groups)
         self.player = player
+        self.game = game # Gameオブジェクトへの参照
         self.screen = pygame.display.get_surface()
 
         # レーザーの基本設定
         self.duration = 180  # 3秒間持続
         self.timer = self.duration
         self.damage = 0.5  # 1フレームあたりのダメージ
+        self.score_per_bullet = 50 # 敵弾1つあたりのスコア
 
         # プレイヤーが持つ敵グループへの参照を取得
         self.enemy_group = self.player.enemy_group
@@ -92,3 +94,12 @@ class MasterSpark(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, enemy) and hasattr(enemy, 'take_damage'):
                 # 敵のtake_damageメソッドを呼び出してダメージを与える
                 enemy.take_damage(self.damage)
+        
+        # レーザーと衝突した敵弾を消去し、スコアを加算
+        if self.player.enemy_bullets:
+            # spritecollideは衝突したスプライトのリストを返す
+            # 第3引数 True は、衝突したスプライトをグループから削除することを意味する
+            # 第4引数でピクセルパーフェクトな当たり判定を指定
+            collided_bullets = pygame.sprite.spritecollide(self, self.player.enemy_bullets, True, pygame.sprite.collide_mask)
+            if collided_bullets:
+                self.game.score += len(collided_bullets) * self.score_per_bullet

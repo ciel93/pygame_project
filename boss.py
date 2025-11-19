@@ -74,6 +74,14 @@ class BossEnemy(Enemy):
         }
 
     def move(self):
+        # レーヴァテイン薙ぎ払い後の特殊移動
+        if self.is_laevateinn_moving:
+            self.pos.x += 3.0 * self.laevateinn_move_dir # 少し速めに移動
+            if not (self.rect.width / 2 < self.pos.x < GAME_AREA_WIDTH - self.rect.width / 2):
+                self.laevateinn_move_dir *= -1
+            self.rect.center = self.pos
+            return
+
         # 上に現れて、少し下がったら左右に往復する
         target_y = 90
         if self.rect.y < target_y:
@@ -126,7 +134,7 @@ class BossEnemy(Enemy):
                     self.pattern = self.last_attack_pattern
 
         # ディスパッチテーブルを使って攻撃パターンを実行
-        if self.pattern in self.attack_patterns:
+        if self.pattern in self.attack_patterns: # パターンが存在すれば実行
             self.attack_patterns[self.pattern]()
     def _wave_spread(self):
         # 横に波打つように縦列で弾を連続発射（少しずつ横ずれ）
@@ -263,8 +271,8 @@ class BossEnemy(Enemy):
 
     def _laser_sweep(self):
         """レーザーのように弾を薙ぎ払う新しいパターン"""
-        # 弾の生成を16フレームに1回に調整（密度をさらに減らすため）
-        if self.pattern_timer % 32 == 0: # 生成間隔を32フレームに倍増
+        # 弾の生成を32フレームに1回に調整（密度をさらに減らすため）
+        if self.pattern_timer % 32 == 0: 
             speed = 2.0 # 弾速を遅くする
             
             # レーザーの角度を計算（度数法からラジアンに変換）
@@ -315,7 +323,7 @@ class BossEnemy(Enemy):
             angle_rad = math.radians(angle_deg)
             direction = pygame.math.Vector2(math.cos(angle_rad), math.sin(angle_rad))
 
-            # レーザーの軌跡に弾を生成
+            # 剣のような形で弾を生成
             if (self.pattern_timer - pre_action_duration) % 8 == 0:
                 sword_length = 24  # 弾数
                 for i in range(sword_length):
@@ -329,7 +337,7 @@ class BossEnemy(Enemy):
         # フェーズ3: 横移動しながら剣を突き出す
         else:
             self.image = self.original_image.copy() # 色を元に戻す
-            self.is_laevateinn_moving = True
+            self.is_laevateinn_moving = True # 特殊移動フラグを立てる
             self.laevateinn_move_dir = self.laevateinn_dir            
 
             if self.pattern_timer % 14 == 0: # 間隔を広げる

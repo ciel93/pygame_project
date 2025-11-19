@@ -2,7 +2,7 @@ import pygame
 import random
 from setting import *
 from enemy import Enemy
-from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy # boss_subclassesはStageManager内で直接インポート
+from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy, ScatterEnemy # boss_subclassesはStageManager内で直接インポート
 from boss import BossEnemy
 from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss
 
@@ -18,23 +18,30 @@ class StageManager:
             1: [ # ステージ1
                 {'start': 0,      'type': 'normal', 'count': 8,  'interval': 800},
                 {'start': 5000,   'type': 'fast',   'count': 5, 'interval': 600},
-                {'start': 10000,  'type': 'wave',   'count': 7,  'interval': 900},
+                {'start': 9000,   'type': 'wave',   'count': 7,  'interval': 900},
+                {'start': 13000,  'type': 'normal', 'count': 8,  'interval': 1800}, 
                 {'start': 16000,  'type': 'tank',   'count': 6,  'interval': 1000},
+                {'start': 19000,  'type': 'fast',   'count': 8,  'interval': 400},  # fastを追加
                 {'start': 23000,  'type': 'normal', 'count': 12, 'interval': 500},
                 {'start': 30000,  'type': 'stage1_boss', 'count': 1, 'interval': 0}, # ステージ1の最初のボス
                 {'start': 38000,  'type': 'normal', 'count': 15, 'interval': 400}, # ボス間のザコ敵
-                {'start': 45000,  'type': 'boss',   'count': 1,  'interval': 0},   # ステージ1の最終ボス
+                {'start': 42000,  'type': 'wave',   'count': 10, 'interval': 500}, # waveを追加
+                {'start': 48000,  'type': 'boss',   'count': 1,  'interval': 0},   # ステージ1の最終ボス
             ],
             2: [ # ステージ2
                 {'start': 0,      'type': 'normal', 'count': 15, 'interval': 400},
                 {'start': 7000,   'type': 'fast',   'count': 8,  'interval': 400},
+                {'start': 10000,  'type': 'scatter','count': 4,  'interval': 1500}, # 新しい敵を追加
                 {'start': 13000,  'type': 'hunter', 'count': 6,  'interval': 1200}, # 新しい敵を追加
+                {'start': 17000,  'type': 'tank',   'count': 5,  'interval': 1000}, # tankを追加
                 {'start': 20000,  'type': 'stage2_mid_boss', 'count': 1, 'interval': 0},  # ステージ2の中ボス
                 {'start': 26000,  'type': 'hunter', 'count': 4,  'interval': 1000}, # 中ボス後の追撃
                 {'start': 27000,  'type': 'fast',   'count': 6,  'interval': 500},  # hunterと同時に出現
+                {'start': 29000,  'type': 'scatter','count': 5,  'interval': 800}, # 中ボス後にScatterEnemyを追加
                 {'start': 32000,  'type': 'tank',   'count': 8,  'interval': 800},
                 {'start': 38000,  'type': 'wave',   'count': 10, 'interval': 600},
-                {'start': 44000,  'type': 'grand_boss', 'count': 1, 'interval': 0},
+                {'start': 42000,  'type': 'normal', 'count': 20, 'interval': 200}, # 大ボス前のラッシュ
+                {'start': 48000,  'type': 'grand_boss', 'count': 1, 'interval': 0},
             ]
         }
         self.stage = 1
@@ -162,6 +169,7 @@ class StageManager:
             'tank': TankEnemy,
             'wave': WaveEnemy,
             'hunter': HunterEnemy, # マップに追加
+            'scatter': ScatterEnemy, # マップに追加
             'boss': BossEnemy,
             'stage1_boss': Stage1Boss,
             'stage2_mid_boss': Stage2MidBoss,

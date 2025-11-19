@@ -41,18 +41,6 @@ class GrandBossEnemy(BossEnemy):
         # HPによる発狂モードのフラグ
         self.enrage_mode = False
 
-    def move(self):
-        # レーヴァテイン薙ぎ払い後の特殊移動
-        if self.is_laevateinn_moving:
-            self.pos.x += 3.0 * self.laevateinn_move_dir # 少し速めに移動
-            if not (self.rect.width / 2 < self.pos.x < GAME_AREA_WIDTH - self.rect.width / 2):
-                self.laevateinn_move_dir *= -1
-            self.rect.center = self.pos
-            return
-        
-        # それ以外は親クラスの移動ロジックに従う
-        super().move()
-
     def create_pattern(self):
         # HPが半分以下になったら発狂モードに移行
         if not self.enrage_mode and self.health <= self.max_health / 2:

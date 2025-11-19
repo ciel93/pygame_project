@@ -46,7 +46,7 @@ class Game:
         )
 
         #自機
-        self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
+        self.player = Player(self.player_group, 300, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
         
         #背景
         self.bg_images = []
@@ -95,37 +95,145 @@ class Game:
             self.player = None # プレイヤーオブジェクトへの参照を削除
             self.stage_manager.spawn_active = False # 敵の出現を停止
             draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
-
     def grand_boss_death(self):
         # 大ボスを倒したらクリア
         if self.grand_boss_defeated:
             self.game_clear = True
 
-    def reset(self):
-        key = pygame.key.get_pressed()
-        if (self.game_over or self.game_clear) and key[pygame.K_SPACE]:
-            # プレイヤーを再生成（敵弾グループも渡す）
-            self.player = Player(self.player_group, 300, 500, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
-            
-            # プールをクリアまたはリセット
-            self.bullet_pool.pool.clear() # プール内の弾はkill()されていないので、ここでクリア
-            self.homing_bullet_pool.pool.clear()
-            self.enemy_bullet_pool.pool.clear()
-            # 既存の敵と弾をすべて削除
-            self.enemy_group.empty()
-            self.enemy_bullets.empty()
-            self.item_group.empty()
-            self.score = 0 # スコアをリセット
-            self.game_clear = False
-            self.game_over = False
+    def reset_game(self):
+        """ゲームの状態を完全に初期化する"""
+        # プレイヤーを再生成
+        self.player = Player(self.player_group, 300, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
+        
+        # プールとグループをクリア
+        self.bullet_pool.pool.clear()
+        self.homing_bullet_pool.pool.clear()
+        self.enemy_bullet_pool.pool.clear()
+        self.enemy_group.empty()
+        self.enemy_bullets.empty()
+        self.item_group.empty()
+        
+        # 各種フラグとスコアをリセット
+        self.score = 0
+        self.game_clear = False
+        self.game_over = False
+        self.paused = False # ポーズ状態も解除
+        self.grand_boss_defeated = False
+        
+        # ステージマネージャーをリセットしてステージ1から再開
+        self.stage_manager.reset()
+        # 背景画像をステージ1のものに戻す
+        self.bg_img = self.bg_images[0]
 
-            # ステージマネージャーをリセットしてステージ1から再開
-            self.stage_manager.reset()
-            # 背景画像をステージ1のものに戻す
-            self.bg_img = self.bg_images[0]
-            
-            self.grand_boss_defeated = False # フラグをリセット
-    
+    def scroll_bg(self):
+        # 全ステージで共通のシンプルなスクロール処理を使用
+        bg_height = self.bg_img.get_height()
+        self.bg_y = (self.bg_y + 1) % bg_height
+        self.screen.blit(self.bg_img, (0, self.bg_y - bg_height))
+        self.screen.blit(self.bg_img, (0, self.bg_y))
+
+    def draw_ui(self, clock):
+        """ゲームエリア右側のスコア表示画面を描画する"""
+        # スコアパネルの背景
+        pygame.draw.rect(self.screen, BLACK, (GAME_AREA_WIDTH, 0, SCORE_PANEL_WIDTH, screen_height))
+        # ゲームエリアとの境界線
+        pygame.draw.line(self.screen, WHITE, (GAME_AREA_WIDTH, 0), (GAME_AREA_WIDTH, screen_height), 2)
+
+        # ステージ表示
+        stage_text = f"STAGE: {self.stage_manager.stage}"
+        stage_surface = self.font_ui.render(stage_text, True, WHITE)
+        self.screen.blit(stage_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - stage_surface.get_width()) // 2, 50))
+
+        # スコア表示
+        score_title_surface = self.font_ui.render("SCORE", True, WHITE)
+        self.screen.blit(score_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_title_surface.get_width()) // 2, 90))
+        score_value_surface = self.font_ui.render(f"{self.score:07d}", True, SCORE_TEXT_COLOR) # 7桁表示
+        self.screen.blit(score_value_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_value_surface.get_width()) // 2, 125))
+
+        # ライフ表示 (既存のものを移動)
+        if len(self.player_group) > 0:
+            lives_text = f"LIVES: {self.player.health}"
+            lives_surface = self.font_ui.render(lives_text, True, WHITE)
+            self.screen.blit(lives_surface, (GAME_AREA_WIDTH + 20, screen_height - 50))
+
+        # ボム表示
+        if len(self.player_group) > 0:
+            bomb_text = f"BOMB: {self.player.bombs}"
+            bomb_surface = self.font_ui.render(bomb_text, True, WHITE)
+            self.screen.blit(bomb_surface, (GAME_AREA_WIDTH + 20, screen_height - 80))
+
+        # パワーレベル表示
+        if len(self.player_group) > 0:
+            power_title_surface = self.font_ui.render("POWER", True, SCORE_TEXT_COLOR)
+            self.screen.blit(power_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_title_surface.get_width()) // 2, 165))
+            power_level_text = f"{self.player.power_level} / {self.player.max_power}"
+            power_level_surface = self.font_ui.render(power_level_text, True, WHITE)
+            self.screen.blit(power_level_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_level_surface.get_width()) // 2, 200))
+
+        # FPS表示
+        fps = clock.get_fps()
+        fps_text = f"FPS: {fps:.2f}"
+        fps_surface = self.font_ui.render(fps_text, True, WHITE)
+        # UIパネルの上部に中央揃えで表示
+        self.screen.blit(fps_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - fps_surface.get_width()) // 2, 20))
+
+    def check_score_award(self):
+        """敵が倒されたかチェックし、スコアを加算する"""
+        for enemy in self.enemy_group:
+            if getattr(enemy, 'should_award_score', False):
+                self.score += getattr(enemy, 'score_value', 0)
+                enemy.should_award_score = False # スコアの二重加算を防ぐ
+
+    def draw_boss_hp_bar(self, boss):
+        """ボスのHPバーを画面上部に描画する"""
+        # HPバーの位置とサイズ
+        bar_width = GAME_AREA_WIDTH - 200   # 画面幅より少し短く
+        bar_height = 25                     # 少し高さを出す
+        bar_x = (GAME_AREA_WIDTH - bar_width) // 2
+        bar_y = 40 # 表示位置を下に下げる
+
+        # HPの割合を計算
+        hp_ratio = max(0, boss.health / boss.max_health)
+
+        # 背景バー (非常に暗い灰色)
+        bg_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
+        pygame.draw.rect(self.screen, BOSS_HP_BAR_BG_COLOR, bg_rect)
+
+        # 前景HPバー
+        fg_width = bar_width * hp_ratio
+        fg_rect = pygame.Rect(bar_x, bar_y, fg_width, bar_height)
+        
+        # HP残量に応じて色を変える (より鮮やかな色)
+        if hp_ratio < 0.2:
+            color = BOSS_HP_LOW_COLOR
+        elif hp_ratio < 0.5:
+            color = BOSS_HP_MID_COLOR
+        else:
+            color = BOSS_HP_HIGH_COLOR
+        pygame.draw.rect(self.screen, color, fg_rect)
+
+        # 枠線 (太くする)
+        pygame.draw.rect(self.screen, WHITE, bg_rect, 3)
+
+        # 「BOSS HP」テキストを追加
+        draw_text(self.screen, "BOSS HP", GAME_AREA_WIDTH // 2, bar_y - 15, 30, WHITE)
+
+    def check_boss_defeat_and_convert_bullets(self):
+        """ボスが倒されたかチェックし、残った敵弾をスコアに変換する"""
+        for enemy in self.enemy_group:
+            # BossEnemy またはそのサブクラス（GrandBossEnemy）が対象
+            if isinstance(enemy, BossEnemy) and getattr(enemy, 'just_defeated', False):
+                # 大ボスが倒されたことを記録
+                if isinstance(enemy, GrandBossEnemy):
+                    self.grand_boss_defeated = True
+                score_per_bullet = 100  # 弾1つあたりのスコア
+                bullet_count = len(self.enemy_bullets)
+
+                self.score += bullet_count * score_per_bullet
+                self.enemy_bullets.empty()  # 全ての敵弾を消去
+
+                enemy.just_defeated = False # フラグをリセットして二重処理を防ぐ
+
     def scroll_bg(self):
         # 全ステージで共通のシンプルなスクロール処理を使用
         bg_height = self.bg_img.get_height()
@@ -245,12 +353,13 @@ class Game:
         elif self.paused:
             # ポーズ中は描画のみ行い、更新処理をスキップ
             draw_text(self.screen, 'PAUSED', GAME_AREA_WIDTH // 2, screen_height // 2, 75, WHITE)
+            draw_text(self.screen, 'Press R to Reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 60, 40, WHITE)
         else:
             # --- 通常のゲームループ ---
             # ステージ管理と敵生成
             result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
             if result == "game_clear":
-                self.game_clear = True
+                self.game_clear = True # ゲームクリア
             elif isinstance(result, int): # ステージ移行
                  self.bg_img = self.bg_images[result - 1]
             
@@ -259,7 +368,7 @@ class Game:
             if self.player:
                 self.player.bomb_group.update()
                 self.player.bullet_group.update()
-            self.enemy_group.update()
+            self.enemy_group.update() # 敵のupdate
             self.enemy_bullets.update()
 
             # アイテムの更新（プレイヤーが生きている場合、位置を渡す）
@@ -296,12 +405,14 @@ class Game:
             # 5. 画面外の敵弾をプールに戻す
             self.check_enemy_bullets_off_screen()
 
-            # ボム発動中は敵弾を消去
+            # ボム発動の瞬間に画面上の敵弾を一掃し、スコアを加算
             if self.player and self.player.bomb_active and getattr(self.player, 'bomb_just_activated', False):
                 bullets_cleared = len(self.enemy_bullets)
                 score_per_bullet = 50  # 弾1つあたりのスコア
                 self.score += bullets_cleared * score_per_bullet
-                self.enemy_bullets.empty() # 画面上のすべての敵弾を消去
+                # 画面上のすべての敵弾をプールに戻す
+                for bullet in list(self.enemy_bullets):
+                    self.enemy_bullet_pool.put(bullet)
                 self.player.bomb_just_activated = False # フラグをリセット
 
         # Quadtreeの描画（デバッグ用）
@@ -353,7 +464,6 @@ class Game:
 
         # プレイヤーの死亡判定とリセット処理
         self.player_death()
-        self.reset()
 
     def check_collisions_with_quadtree(self):
         """Quadtreeを使用して衝突判定を行う"""
@@ -420,6 +530,21 @@ class Game:
 
     def check_player_bullets_off_screen(self):
         """画面外に出たプレイヤーの弾をプールに戻す"""
+        if self.player:
+            for bullet in self.player.bullet_group:
+                if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
+                   bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
+                    if isinstance(bullet, HomingBullet):
+                        self.homing_bullet_pool.put(bullet)
+                    else:
+                        self.bullet_pool.put(bullet)
+
+    def check_enemy_bullets_off_screen(self):
+        """画面外に出た敵弾をプールに戻す"""
+        for bullet in self.enemy_bullets:
+            if bullet.rect.top > screen_height or bullet.rect.bottom < 0 or \
+               bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
+                self.enemy_bullet_pool.put(bullet)
         if self.player:
             for bullet in self.player.bullet_group:
                 if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \

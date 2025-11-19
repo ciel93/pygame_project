@@ -10,11 +10,12 @@ class Player(pygame.sprite.Sprite):
     # 画像をキャッシュするためのクラス変数
     _image_cache = {}
 
-    def __init__(self, groups, x, y, enemy_group, enemy_bullets_group=None, item_group=None, bullet_pool=None, homing_bullet_pool=None):
+    def __init__(self, groups, x, y, game, enemy_group, enemy_bullets_group=None, item_group=None, bullet_pool=None, homing_bullet_pool=None):
         super().__init__(groups)
 
         self.screen = pygame.display.get_surface()
-
+        self.game = game # Gameオブジェクトへの参照
+        
         #グループ
         self.bullet_group = pygame.sprite.Group()
         self.bomb_group = pygame.sprite.GroupSingle()
@@ -164,7 +165,7 @@ class Player(pygame.sprite.Sprite):
         self.bomb_active = True
         self.bomb_timer = self.bomb_cooldown
         self.bomb_just_activated = True # ボムが発動されたことを示すフラグを立てる
-        MasterSpark(self.bomb_group, self)
+        MasterSpark(self.bomb_group, self, self.game)
 
     def cooldown_bullet(self):
         if self.fire:
@@ -291,7 +292,7 @@ class Player(pygame.sprite.Sprite):
 
             # ダメージ時にパワーアイテムをドロップ
             if self.item_group is not None:
-                num_items_to_drop = 5 #ドロップするアイテムの数
+                num_items_to_drop = 5 # 被弾時にドロップするアイテムの数
                 spawn_offset_radius = 5 # 自機からアイテムがドロップする距離を近づける
                 for i in range(num_items_to_drop):
                     # 360度ランダムな方向を決定

@@ -5,6 +5,114 @@ from enemy import Enemy
 from enemy_bullet import EnemyBullet
 from setting import *
 
+class ScatterEnemy(Enemy):
+    """撃破されると全方位に弾をばらまく設置型の敵"""
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+        self.speed = 1.0       # ゆっくり移動
+        self.health = 15       # HPを大幅に増加
+        self.score_value = 50  # ScatterEnemyのスコア
+
+        # 画像の設定
+        image_path = 'assets/img/enemy/scatter.png'
+        if image_path in Enemy._image_cache:
+            pre = Enemy._image_cache[image_path]
+        else:
+            try:
+                pre = pygame.image.load(image_path).convert_alpha()
+                Enemy._image_cache[image_path] = pre
+            except Exception:
+                pre = None
+        
+        if pre:
+            self.image = pygame.transform.scale(pre, (50, 50))
+        else:
+            # 画像がない場合のフォールバック描画
+            self.image = pygame.Surface((50, 50), pygame.SRCALPHA)
+            pygame.draw.rect(self.image, (200, 100, 255), (10, 10, 30, 30))
+            pygame.draw.circle(self.image, (255, 255, 255), (25, 25), 10, 2)
+        self.rect = self.image.get_rect(center=(x, y))
+
+        self.pos = pygame.math.Vector2(x, y)
+        self.target_y = random.randint(100, 250) # 停止目標Y座標
+
+        # 攻撃パターン用のパラメータ
+        self.fire_state = 'idle'  # 'idle', 'firing', 'cooldown'
+        self.fire_timer = 0
+        self.shots_fired = 0
+        self.burst_shots = 3      # 1回の連射で発射する回数
+        self.burst_interval = 15  # 連射の間隔（フレーム）
+        self.cooldown_duration = 120 # 連射後のクールダウン（フレーム）
+
+    def move(self):
+        """指定したY座標までゆっくり降りてきて停止する"""
+        if self.pos.y < self.target_y:
+            self.pos.y += self.speed
+        self.rect.center = self.pos
+
+    def create_fire(self):
+        """n-way弾を断続的に連射する攻撃パターン"""
+        # 停止後でなければ攻撃しない
+        if self.pos.y < self.target_y:
+            return
+
+        self.fire_timer += 1
+
+        if self.fire_state == 'idle':
+            self.fire_state = 'firing'
+            self.fire_timer = 0
+            self.shots_fired = 0
+
+        elif self.fire_state == 'firing':
+            if self.fire_timer >= self.burst_interval and self.shots_fired < self.burst_shots:
+                self.fire_timer = 0
+                self.shots_fired += 1
+                
+                n = 5  # 5-way弾
+                spread_angle_deg = 45
+                
+                # プレイヤーの方向を基準にする
+                if self.player_group and self.player_group.sprite:
+                    player_dir = self.player_group.sprite.pos - self.pos
+                    center_angle_rad = math.atan2(player_dir.y, player_dir.x)
+                else:
+                    center_angle_rad = math.radians(90) # 真下
+                
+                spread_angle_rad = math.radians(spread_angle_deg)
+                for i in range(n):
+                    angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i
+                    direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=3.0, direction=direction)
+
+            if self.shots_fired >= self.burst_shots:
+                self.fire_state = 'cooldown'
+                self.fire_timer = 0
+
+        elif self.fire_state == 'cooldown':
+            if self.fire_timer >= self.cooldown_duration:
+                self.fire_state = 'idle'
+                self.fire_timer = 0
+
+    def check_death(self):
+        # 死亡時に弾をばらまく
+        if not self.alive and not self.explosion:
+            num_bullets = 16 # ばらまく弾の数
+            for i in range(num_bullets):
+                angle = (360 / num_bullets) * i
+                direction = pygame.math.Vector2(1, 0).rotate(angle)
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction)
+        
+        # 親クラスの死亡処理を呼び出す
+        super().check_death()
+
+    def update(self):
+        # 親クラスのupdateを呼び出すが、移動と弾発射は独自のものを使用
+        super().update(move_override=True)
+        self.move()
+        self.create_fire()
+
 class FastEnemy(Enemy):
     """素早く動いて少ないHPの敵、スポーン時に停止して自機狙い弾を発射"""
     def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
