@@ -73,6 +73,7 @@ class Game:
         self.grand_boss_defeated = False # 大ボスを倒したかどうかのフラグ
         self.paused = False # ポーズ状態のフラグ
         self.show_quadtree = False # Quadtreeの表示フラグ
+        self.no_miss_status = True # ノーミス状態フラグ
         self.show_enemy_hitbox = False # 敵弾の当たり判定表示フラグ
         self.show_pool_debug = False # オブジェクトプールのデバッグ表示フラグ
 
@@ -99,11 +100,18 @@ class Game:
         """ゲームの状態を完全に初期化する"""
         # プレイヤーを再生成
         self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
-        
-        # プールとグループをクリア
-        self.bullet_pool.pool.clear()
-        self.homing_bullet_pool.pool.clear()
-        self.enemy_bullet_pool.pool.clear()
+
+        # 画面上の全オブジェクトをそれぞれのプールに戻す
+        if self.player:
+            for bullet in list(self.player.bullet_group):
+                if isinstance(bullet, HomingBullet):
+                    self.homing_bullet_pool.put(bullet)
+                else:
+                    self.bullet_pool.put(bullet)
+        for bullet in list(self.enemy_bullets):
+            self.enemy_bullet_pool.put(bullet)
+
+        # グループを空にする
         self.enemy_group.empty()
         self.enemy_bullets.empty()
         self.item_group.empty()
@@ -114,6 +122,7 @@ class Game:
         self.game_over = False
         self.paused = False # ポーズ状態も解除
         self.grand_boss_defeated = False
+        self.no_miss_status = True # リセット時にノーミス状態に戻す
         
         # ステージマネージャーをリセットしてステージ1から再開
         self.stage_manager.reset()
@@ -153,7 +162,8 @@ class Game:
 
         # ボム表示
         if len(self.player_group) > 0:
-            bomb_text = f"BOMB: {self.player.bombs}"
+            bombs_available = self.player.power // 100
+            bomb_text = f"BOMB: {bombs_available}"
             bomb_surface = self.font_ui.render(bomb_text, True, WHITE)
             self.screen.blit(bomb_surface, (GAME_AREA_WIDTH + 20, screen_height - 80))
 
@@ -161,7 +171,7 @@ class Game:
         if len(self.player_group) > 0:
             power_title_surface = self.font_ui.render("POWER", True, SCORE_TEXT_COLOR)
             self.screen.blit(power_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_title_surface.get_width()) // 2, 165))
-            power_level_text = f"{self.player.power_level} / {self.player.max_power}"
+            power_level_text = f"{self.player.power} / {self.player.max_power}"
             power_level_surface = self.font_ui.render(power_level_text, True, WHITE)
             self.screen.blit(power_level_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_level_surface.get_width()) // 2, 200))
 
@@ -306,25 +316,22 @@ class Game:
                 bullet_count = len(self.enemy_bullets)
 
                 self.score += bullet_count * score_per_bullet
+                # 全ての敵弾をプールに戻す
+                for bullet in list(self.enemy_bullets):
+                    self.enemy_bullet_pool.put(bullet)
                 self.enemy_bullets.empty()  # 全ての敵弾を消去
 
                 enemy.just_defeated = False # フラグをリセットして二重処理を防ぐ
 
     def run(self, clock):
+        # 1. 背景描画
         self.scroll_bg()
-        
-        if self.game_over:
-            # ゲームオーバー画面の描画
-            draw_text(self.screen, 'GAME OVER', GAME_AREA_WIDTH // 2, screen_height // 2, 75, RED)
-            draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 100, 50, RED)
-        elif self.paused:
-            # ポーズ中は描画のみ行い、更新処理をスキップ
-            draw_text(self.screen, 'PAUSED', GAME_AREA_WIDTH // 2, screen_height // 2, 75, WHITE)
-            draw_text(self.screen, 'Press R to Reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 60, 40, WHITE)
-        else:
+
+        # 2. ゲームの状態に応じた更新と描画
+        if not self.game_over and not self.paused:
             # --- 通常のゲームループ ---
             # ステージ管理と敵生成
-            result = self.stage_manager.update(self.game_over, self.grand_boss_defeated)
+            result = self.stage_manager.update(self.game_over, self.grand_boss_defeated, self.no_miss_status)
             if result == "game_clear":
                 self.game_clear = True # ゲームクリア
             elif isinstance(result, int): # ステージ移行
@@ -382,52 +389,53 @@ class Game:
                     self.enemy_bullet_pool.put(bullet)
                 self.player.bomb_just_activated = False # フラグをリセット
 
-        # Quadtreeの描画（デバッグ用）
+            # --- 描画処理 ---
+            self.player_group.draw(self.screen)
+            if self.player:
+                self.player.bomb_group.draw(self.screen)
+                self.player.bullet_group.draw(self.screen)
+            self.enemy_group.draw(self.screen)
+            self.enemy_bullets.draw(self.screen)
+            self.item_group.draw(self.screen)
+
+            # ボスがいればHPバーを描画
+            for enemy in self.enemy_group:
+                if isinstance(enemy, BossEnemy):
+                    self.draw_boss_hp_bar(enemy)
+                    break
+
+            # ステージクリア時のメッセージ表示
+            if self.stage_manager.stage_clear_timer > 0 and not self.game_clear:
+                draw_text(self.screen, f'STAGE {self.stage_manager.stage} CLEAR', GAME_AREA_WIDTH // 2, screen_height // 2, 75, GREEN)
+
+        elif self.game_over:
+            # ゲームオーバー画面の描画
+            draw_text(self.screen, 'GAME OVER', GAME_AREA_WIDTH // 2, screen_height // 2, 75, RED)
+            draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 100, 50, RED)
+        elif self.paused:
+            # ポーズ中は描画のみ行い、更新処理をスキップ
+            draw_text(self.screen, 'PAUSED', GAME_AREA_WIDTH // 2, screen_height // 2, 75, WHITE)
+            draw_text(self.screen, 'Press R to Reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 60, 40, WHITE)
+
+        # 3. UIとデバッグ情報の描画 (常に最前面)
+        self.draw_ui(clock)
+
+        # デバッグ用の描画
         if self.show_quadtree:
             self.enemy_quadtree.draw(self.screen)
             self.enemy_bullet_quadtree.draw(self.screen)
-
-        # --- 以下はポーズ中も実行される描画処理 ---
-
-        # グループの描画
-        self.player_group.draw(self.screen)
-        if self.player:
-            self.player.bomb_group.draw(self.screen)
-            self.player.bullet_group.draw(self.screen)
-        self.enemy_group.draw(self.screen)
-        self.enemy_bullets.draw(self.screen)
-        self.item_group.draw(self.screen)
-        
-        # プレイヤーの当たり判定を描画 (デバッグ用)
         if self.player and self.player.show_hitbox:
-            # 緑の円でヒットボックス、赤い点で中心を表示
             pygame.draw.circle(self.screen, GREEN, (int(self.player.pos.x), int(self.player.pos.y)), self.player.radius, 1)
             pygame.draw.circle(self.screen, RED, (int(self.player.pos.x), int(self.player.pos.y)), 2)
-
-        # 敵弾の当たり判定を描画 (デバッグ用)
         if self.show_enemy_hitbox:
             for bullet in self.enemy_bullets:
                 pygame.draw.circle(self.screen, RED, (int(bullet.pos.x), int(bullet.pos.y)), bullet.radius, 1)
 
-
-        # ボスがいればHPバーを描画
-        for enemy in self.enemy_group:
-            if isinstance(enemy, BossEnemy):
-                self.draw_boss_hp_bar(enemy)
-                break # ボスは1体しかいないはずなのでループを抜ける
-
-        # UI（スコア、ライフなど）を描画
-        self.draw_ui(clock)
-
-        # ステージクリア時のメッセージ表示
-        if self.stage_manager.stage_clear_timer > 0 and not self.game_clear:
-            draw_text(self.screen, f'STAGE {self.stage_manager.stage} CLEAR', GAME_AREA_WIDTH // 2, screen_height // 2, 75, GREEN)
-        
-        # ゲームクリアの判定と描画
-        self.grand_boss_death()
+        # 4. ゲームクリア/ゲームオーバーの最終チェックと描画
+        self.grand_boss_death() # ゲームクリアフラグを更新
         if self.game_clear:
-            draw_text(self.screen, 'GAME CLEAR', GAME_AREA_WIDTH // 2, screen_height //2 ,75 , GREEN)
-            draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height //2 + 100 ,50 , RED)
+            draw_text(self.screen, 'GAME CLEAR', GAME_AREA_WIDTH // 2, screen_height // 2, 75, GREEN)
+            draw_text(self.screen, 'press SPACE KEY to reset', GAME_AREA_WIDTH // 2, screen_height // 2 + 100, 50, RED)
 
         # プレイヤーの死亡判定とリセット処理
         self.player_death()
@@ -487,11 +495,8 @@ class Game:
                     self.item_group.add(item) # グループに戻す
                     continue # 次のアイテムへ
                 if item.item_type == 'power':
-                    if self.player.power_level < self.player.max_power:
-                        self.player.power_level += 1
-                elif item.item_type == 'bomb':
-                    if self.player.bombs < self.player.max_bombs:
-                        self.player.bombs += 1
+                    # パワーを100増やし、最大値を超えないようにする（効果を上昇）
+                    self.player.power = min(self.player.max_power, self.player.power + 100)
                 elif item.item_type == 'score':
                     self.score += item.value
 

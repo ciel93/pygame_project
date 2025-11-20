@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 from setting import *
 
 class Item(pygame.sprite.Sprite):

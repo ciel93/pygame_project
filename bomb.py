@@ -103,3 +103,5 @@ class MasterSpark(pygame.sprite.Sprite):
             collided_bullets = pygame.sprite.spritecollide(self, self.player.enemy_bullets, True, pygame.sprite.collide_mask)
             if collided_bullets:
                 self.game.score += len(collided_bullets) * self.score_per_bullet
+                for bullet in collided_bullets:
+                    self.game.enemy_bullet_pool.put(bullet)

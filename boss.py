@@ -10,11 +10,11 @@ class BossEnemy(Enemy):
     def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
         super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 1.0
-        self.health = 250
-        self.max_health = 250
+        self.health = 350
+        self.max_health = 350
         self.pattern_timer = 0
         self.pattern_change_time = 300 # パターン切替時間（フレーム数）
-        self.score_value = 100 # ボスのスコア
+        self.score_value = 200 # ボスのスコア
         self.pattern = 0
         self.angle = 0.0
         self.vortex_angle = 0.0 # うずまき用の角度
@@ -384,19 +384,36 @@ class BossEnemy(Enemy):
 
     def _all_around_shot(self):
         """全方位に弾を発射する通常弾幕"""
-        if self.pattern_timer % 20 == 0: # 20フレームごとに発射
-            num_bullets = 12 # 12方向
+        if self.pattern_timer % 20 == 0:  # 20フレームごとに発射
+            num_directions = 10  # 10方向 (隙間を広げる)
+            num_bullets_per_direction = 3  # 各方向に3発の弾を発射
+            spread_angle = 0.2  # 弾の広がり具合を大きくする（ラジアン）
 
             # 毎回少し角度をずらして、螺旋状に見せる
-            angle_offset = math.radians(self.pattern_timer) # 緩やかな回転
-            
-            for i in range(num_bullets):
-                angle = (2 * math.pi / num_bullets) * i + angle_offset
-                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
+            angle_offset = math.radians(self.pattern_timer)  # 緩やかな回転
+
+            for i in range(num_directions):
+                base_angle = (2 * math.pi / num_directions) * i + angle_offset
+                for j in range(num_bullets_per_direction):
+                    # 弾ごとに少し角度をずらす
+                    angle = base_angle + (j - (num_bullets_per_direction - 1) / 2) * spread_angle
+                    direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
+                    bullet = self.enemy_bullet_pool.get()
+                    bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0.8, direction=direction)
+
+        # 一定間隔でプレイヤーを狙う弾を追加
+        if self.pattern_timer % 60 == 0: # 発射間隔を調整
+            if self.player_group and self.player_group.sprite:
+                player = self.player_group.sprite
+                direction_to_player = (player.pos - self.pos).normalize()
+                
+                # 狙い弾を生成
                 bullet = self.enemy_bullet_pool.get()
-                bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0.8, direction=direction)
+                # 速度を速くし、見た目を変えるためにbullet_typeとradiusを指定
+                bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction_to_player, radius=12, bullet_type='homing')
 
     def check_death(self):
+
         # 倒された最初のフレームでフラグを立てる
         if self.alive == False and self.explosion == False and not self.just_defeated:
             self.just_defeated = True

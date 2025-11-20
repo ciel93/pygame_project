@@ -11,6 +11,7 @@ class BulletPool:
         """
         self.pool = []
         self.factory = bullet_factory
+        self.max_size = initial_size
         self.add_to_group = add_to_group_func
 
         # プールをあらかじめ生成しておく
@@ -29,5 +30,6 @@ class BulletPool:
 
     def put(self, bullet):
         """使用済みの弾をプールに戻す。"""
-        bullet.kill() # 全てのグループから削除して非アクティブにする
-        self.pool.append(bullet)
+        if len(self.pool) < self.max_size:
+            bullet.kill() # 全てのグループから削除して非アクティブにする
+            self.pool.append(bullet)

@@ -60,19 +60,17 @@ class Player(pygame.sprite.Sprite):
         #弾
         self.fire = False
         self.timer = 0
-        self.power_level = 1 # 弾のパワーレベル
+        self.power = 0 # 新しい統合パワーシステム
+        self.max_power = 700 # 最大パワー
         # ホーミング弾専用のタイマーとクールダウン
         self.homing_timer = 0
         self.homing_cooldown = 20 # 通常弾の2倍の間隔
-        self.max_power = 7   # 最大パワーレベルを7に引き上げ
 
         #体力
         self.health = 3
         self.alive = True
 
         # ボム関連
-        self.bombs = 3
-        self.max_bombs = 8
         self.bomb_active = False
         self.bomb_cooldown = 30 # ボム使用後の短いクールダウン
         self.bomb_timer = 0
@@ -116,24 +114,26 @@ class Player(pygame.sprite.Sprite):
                 self.image = self.image_list[self.index]
                 self.mask = pygame.mask.from_surface(self.image)
 
+        shot_level = self.power // 100
+
         if key[pygame.K_z] and not self.fire and not self.bomb_active:
             # パワーレベルに応じて弾を発射
-            if self.power_level == 1:
+            if shot_level == 0: # Level 1
                 bullet = self.bullet_pool.get()
                 bullet.reset(self.rect.centerx, self.rect.top)
-            elif self.power_level == 2:
+            elif shot_level == 1: # Level 2
                 b1 = self.bullet_pool.get()
                 b1.reset(self.rect.centerx - 10, self.rect.centery)
                 b2 = self.bullet_pool.get()
                 b2.reset(self.rect.centerx + 10, self.rect.centery)
-            elif self.power_level == 3:
+            elif shot_level == 2: # Level 3
                 b1 = self.bullet_pool.get()
                 b1.reset(self.rect.centerx, self.rect.top)
                 b2 = self.bullet_pool.get()
                 b2.reset(self.rect.centerx - 20, self.rect.centery)
                 b3 = self.bullet_pool.get()
                 b3.reset(self.rect.centerx + 20, self.rect.centery)
-            elif self.power_level == 4:
+            elif shot_level == 3: # Level 4
                 b1 = self.bullet_pool.get()
                 b1.reset(self.rect.centerx - 8, self.rect.top)
                 b2 = self.bullet_pool.get()
@@ -142,7 +142,7 @@ class Player(pygame.sprite.Sprite):
                 b3.reset(self.rect.centerx - 25, self.rect.centery)
                 b4 = self.bullet_pool.get()
                 b4.reset(self.rect.centerx + 25, self.rect.centery)
-            elif self.power_level >= 5:
+            elif shot_level >= 4: # Level 5+
                 b1 = self.bullet_pool.get()
                 b1.reset(self.rect.centerx, self.rect.top)
                 b2 = self.bullet_pool.get()
@@ -153,7 +153,7 @@ class Player(pygame.sprite.Sprite):
             self.fire = True
 
         # ボムの発動
-        if key[pygame.K_x] and not self.bomb_active and self.bombs > 0 and self.bomb_timer == 0:
+        if key[pygame.K_x] and not self.bomb_active and self.power >= 100 and self.bomb_timer == 0:
             self.activate_bomb()
 
     def toggle_hitbox(self):
@@ -161,7 +161,7 @@ class Player(pygame.sprite.Sprite):
         self.show_hitbox = not self.show_hitbox
 
     def activate_bomb(self):
-        self.bombs -= 1
+        self.power = max(0, self.power - 100) # パワーを100消費
         self.bomb_active = True
         self.bomb_timer = self.bomb_cooldown
         self.bomb_just_activated = True # ボムが発動されたことを示すフラグを立てる
@@ -182,17 +182,18 @@ class Player(pygame.sprite.Sprite):
 
     def fire_homing_bullets(self):
         """ホーミング弾を専用のクールダウンで発射する"""
+        shot_level = self.power // 100
         key = pygame.key.get_pressed()
         # パワーレベルが5以上で、Zキーが押されている場合
-        if self.power_level >= 5 and key[pygame.K_z] and not self.bomb_active:
+        if shot_level >= 4 and key[pygame.K_z] and not self.bomb_active:
             # ホーミング弾のクールダウンが終わっていれば発射
             if self.homing_timer == 0:
-                if self.power_level == 5:
+                if shot_level == 4: # Level 5
                     b1 = self.homing_bullet_pool.get()
                     b1.reset(self.rect.left, self.rect.centery)
                     b2 = self.homing_bullet_pool.get()
                     b2.reset(self.rect.right, self.rect.centery)
-                elif self.power_level == 6:
+                elif shot_level == 5: # Level 6
                     b1 = self.homing_bullet_pool.get()
                     b1.reset(self.rect.left - 10, self.rect.centery)
                     b2 = self.homing_bullet_pool.get()
@@ -201,7 +202,7 @@ class Player(pygame.sprite.Sprite):
                     b3.reset(self.rect.left, self.rect.top)
                     b4 = self.homing_bullet_pool.get()
                     b4.reset(self.rect.right, self.rect.top)
-                elif self.power_level >= 7:
+                elif shot_level >= 6: # Level 7
                     b1 = self.homing_bullet_pool.get()
                     b1.reset(self.rect.left - 15, self.rect.centery)
                     b2 = self.homing_bullet_pool.get()
@@ -276,17 +277,18 @@ class Player(pygame.sprite.Sprite):
 
     def take_damage(self, damage_amount=1):
         """ダメージを受けて無敵状態を開始し、アイテムをドロップする"""
+        self.game.no_miss_status = False # ノーミスフラグをFalseに
         self.health -= damage_amount
 
         # 被弾時にホーミング弾を消去
         for bullet in list(self.bullet_group):
             if isinstance(bullet, HomingBullet):
-                bullet.kill()
+                self.homing_bullet_pool.put(bullet)
         if self.health <= 0:
             self.alive = False
         else:
             # HPが残っている場合のみ、パワーダウン、無敵化、アイテムドロップを行う
-            self.power_level = 1
+            self.power = 0 # パワーをリセット
             self.invincible = True
             self.invincible_timer = pygame.time.get_ticks()
 

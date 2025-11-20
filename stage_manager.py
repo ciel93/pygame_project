@@ -2,9 +2,9 @@ import pygame
 import random
 from setting import *
 from enemy import Enemy
-from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy, ScatterEnemy # boss_subclassesはStageManager内で直接インポート
+from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy, ScatterEnemy
 from boss import BossEnemy
-from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss
+from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss, SecretBoss
 
 class StageManager:
     """ステージ進行と敵の出現を管理するクラス"""
@@ -71,7 +71,7 @@ class StageManager:
         self.stage_clear_timer = 0
         return self.stage
 
-    def update(self, game_over, grand_boss_defeated):
+    def update(self, game_over, grand_boss_defeated, no_miss_status):
         """敵の生成とステージ進行を管理する"""
         # ステージクリア待機中
         if self.stage_clear_timer > 0:
@@ -137,17 +137,17 @@ class StageManager:
                 self.next_spawn_time = now + wave['interval']
                 return None
 
-            if len(self.enemy_group) < 20:
-                self.create_enemy(wave)
+            if len(self.enemy_group) < 20: # ボス出現時は他の敵がいても出現させる
+                self.create_enemy(wave, no_miss_status)
                 self.wave_spawned += 1
 
             if wave['interval'] > 0:
                 self.next_spawn_time = now + wave['interval']
             else:
-                self.next_spawn_time = now
+                self.next_spawn_time = now # ボスの場合、インターバル0なので即時処理
         return None
 
-    def create_enemy(self, wave):
+    def create_enemy(self, wave, no_miss_status=False):
         """指定されたウェーブの敵を1体生成する"""
         spawn_type = wave['type']
         # プレイヤーが存在しない場合は敵を生成しない
@@ -188,7 +188,8 @@ class StageManager:
             'boss': BossEnemy,
             'stage1_boss': Stage1Boss,
             'stage2_mid_boss': Stage2MidBoss,
-            'grand_boss': GrandBossEnemy
+            'grand_boss': GrandBossEnemy,
+            'secret_boss': SecretBoss,
         }
 
         enemy_class = enemy_map.get(spawn_type, Enemy)
@@ -196,6 +197,10 @@ class StageManager:
         if 'boss' in spawn_type:
             y = -80 if spawn_type != 'grand_boss' else -120
             x = GAME_AREA_WIDTH // 2
+
+            # 最終ボス出現時にノーミスなら隠しボスに差し替える
+            if spawn_type == 'grand_boss' and no_miss_status:
+                enemy_class = enemy_map['secret_boss']
 
         enemy_class(self.enemy_group, x, y, player.bullet_group, self.player_group, enemy_bullets, self.item_group, enemy_bullet_pool=self.enemy_bullet_pool)
 

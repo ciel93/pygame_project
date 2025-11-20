@@ -115,11 +115,9 @@ class Enemy(pygame.sprite.Sprite):
             # アイテムドロップ判定
             if self.item_group is not None:
                 drop_chance = random.random()
-                if drop_chance < 0.05: # 5%の確率でボム (変更なし)
-                    item_type = 'bomb'
-                elif drop_chance < 0.25: # 20%の確率でスコア (5%～25%)
+                if drop_chance < 0.20: # 20%の確率でスコア
                     item_type = 'score'
-                elif drop_chance < 0.70: # 45%の確率でパワー (25%～70%)
+                elif drop_chance < 0.65: # 45%の確率でパワー (20%～65%)
                     item_type = 'power'
                 else:
                     item_type = None

@@ -21,18 +21,8 @@ game = Game()
 #メインループ##########################################################################################
 run = True
 while run:
-    #背景の塗りつぶし
-    screen.fill(BLACK)
-
-    # スコア表示
-    score_text = score_font.render(f"Score: {game.score}", True, WHITE)
-    screen.blit(score_text, (10, 10))
-
-    # FPS表示
-    fps_text = font.render(f"FPS: {int(clock.get_fps())}", True, WHITE)
-    screen.blit(fps_text, (screen_width - 100, 10))
-
     # ゲームの実行
+    # game.run()が全ての描画と更新を管理する
     game.run(clock)
 
     #イベントの取得
