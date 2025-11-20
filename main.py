@@ -54,6 +54,9 @@ while run:
             # Jキーで敵弾の当たり判定表示を切り替える
             if event.key == pygame.K_j:
                 game.show_enemy_hitbox = not game.show_enemy_hitbox
+            # Oキーでオブジェクトプールのデバッグ表示を切り替える
+            if event.key == pygame.K_o:
+                game.show_pool_debug = not game.show_pool_debug
             # ゲームオーバーまたはクリア時にスペースキーでリセット
             if (game.game_over or game.game_clear) and event.key == pygame.K_SPACE:
                 game.reset_game()

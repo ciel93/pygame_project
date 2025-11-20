@@ -31,34 +31,28 @@ class Game:
         # 弾のオブジェクトプールを作成
         self.bullet_pool = BulletPool(
             bullet_factory=lambda: Bullet(pygame.sprite.Group(), 0, 0),
-            initial_size=50,
+            initial_size=100,
             add_to_group_func=lambda bullet: self.player.bullet_group.add(bullet)
         )
         self.homing_bullet_pool = BulletPool(
             bullet_factory=lambda: HomingBullet(pygame.sprite.Group(), 0, 0, self.enemy_group),
-            initial_size=20,
+            initial_size=80,
             add_to_group_func=lambda bullet: self.player.bullet_group.add(bullet)
         )
         self.enemy_bullet_pool = BulletPool(
             bullet_factory=lambda: EnemyBullet(pygame.sprite.Group(), 0, 0, self.player_group), # 敵弾はプレイヤーをターゲットにする
-            initial_size=200, # 敵弾は数が多いので多めに
+            initial_size=800, # 敵弾は数が多いので多めに
             add_to_group_func=lambda bullet: self.enemy_bullets.add(bullet)
         )
 
         #自機
-        self.player = Player(self.player_group, 300, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
+        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
         
         #背景
         self.bg_images = []
         try:
-            # ステージごとの背景画像をロード
             self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg.png'),(GAME_AREA_WIDTH,screen_height)))
-            
-            # ステージ2の背景はゲームエリアの幅に合わせ、縦横比を維持してリサイズ
-            pre_bg2_img = pygame.image.load('assets/img/background/bg2.jpg')
-            aspect_ratio = pre_bg2_img.get_height() / pre_bg2_img.get_width()
-            new_height = int(GAME_AREA_WIDTH * aspect_ratio)
-            self.bg_images.append(pygame.transform.scale(pre_bg2_img, (GAME_AREA_WIDTH, new_height)))
+            self.bg_images.append(pygame.transform.scale(pygame.image.load('assets/img/background/bg2.jpg'),(GAME_AREA_WIDTH,screen_height)))
 
         except pygame.error:
             # 画像がない場合のフォールバック
@@ -80,6 +74,7 @@ class Game:
         self.paused = False # ポーズ状態のフラグ
         self.show_quadtree = False # Quadtreeの表示フラグ
         self.show_enemy_hitbox = False # 敵弾の当たり判定表示フラグ
+        self.show_pool_debug = False # オブジェクトプールのデバッグ表示フラグ
 
     def create_group(self):
         self.player_group = pygame.sprite.GroupSingle()
@@ -103,7 +98,7 @@ class Game:
     def reset_game(self):
         """ゲームの状態を完全に初期化する"""
         # プレイヤーを再生成
-        self.player = Player(self.player_group, 300, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
+        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
         
         # プールとグループをクリア
         self.bullet_pool.pool.clear()
@@ -177,6 +172,23 @@ class Game:
         # UIパネルの上部に中央揃えで表示
         self.screen.blit(fps_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - fps_surface.get_width()) // 2, 20))
 
+        # オブジェクトプールのデバッグ情報を表示 (フラグがTrueの場合のみ)
+        if self.show_pool_debug:
+            pool_debug_y = 240  # デバッグ情報の表示開始Y座標
+            pool_info = [
+                ("Normal Bullets", len(self.bullet_pool.pool), 100),
+                ("Homing Bullets", len(self.homing_bullet_pool.pool), 80),
+                ("Enemy Bullets", len(self.enemy_bullet_pool.pool), 800),
+            ]
+
+            for name, size, initial_size in pool_info:
+                pool_text = f"{name}: {size}/{initial_size}"
+                pool_surface = self.font_ui.render(pool_text, True, WHITE)
+                self.screen.blit(pool_surface, (GAME_AREA_WIDTH + 20, pool_debug_y))
+                pool_debug_y += 30  # 次の行へ
+
+
+
     def check_score_award(self):
         """敵が倒されたかチェックし、スコアを加算する"""
         for enemy in self.enemy_group:
@@ -240,51 +252,6 @@ class Game:
         self.bg_y = (self.bg_y + 1) % bg_height
         self.screen.blit(self.bg_img, (0, self.bg_y - bg_height))
         self.screen.blit(self.bg_img, (0, self.bg_y))
-
-    def draw_ui(self, clock):
-        """ゲームエリア右側のスコア表示画面を描画する"""
-        # スコアパネルの背景
-        pygame.draw.rect(self.screen, BLACK, (GAME_AREA_WIDTH, 0, SCORE_PANEL_WIDTH, screen_height))
-        # ゲームエリアとの境界線
-        pygame.draw.line(self.screen, WHITE, (GAME_AREA_WIDTH, 0), (GAME_AREA_WIDTH, screen_height), 2)
-
-        # ステージ表示
-        stage_text = f"STAGE: {self.stage_manager.stage}"
-        stage_surface = self.font_ui.render(stage_text, True, WHITE)
-        self.screen.blit(stage_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - stage_surface.get_width()) // 2, 50))
-
-        # スコア表示
-        score_title_surface = self.font_ui.render("SCORE", True, WHITE)
-        self.screen.blit(score_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_title_surface.get_width()) // 2, 90))
-        score_value_surface = self.font_ui.render(f"{self.score:07d}", True, SCORE_TEXT_COLOR) # 7桁表示
-        self.screen.blit(score_value_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - score_value_surface.get_width()) // 2, 125))
-
-        # ライフ表示 (既存のものを移動)
-        if len(self.player_group) > 0:
-            lives_text = f"LIVES: {self.player.health}"
-            lives_surface = self.font_ui.render(lives_text, True, WHITE)
-            self.screen.blit(lives_surface, (GAME_AREA_WIDTH + 20, screen_height - 50))
-
-        # ボム表示
-        if len(self.player_group) > 0:
-            bomb_text = f"BOMB: {self.player.bombs}"
-            bomb_surface = self.font_ui.render(bomb_text, True, WHITE)
-            self.screen.blit(bomb_surface, (GAME_AREA_WIDTH + 20, screen_height - 80))
-
-        # パワーレベル表示
-        if len(self.player_group) > 0:
-            power_title_surface = self.font_ui.render("POWER", True, SCORE_TEXT_COLOR)
-            self.screen.blit(power_title_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_title_surface.get_width()) // 2, 165))
-            power_level_text = f"{self.player.power_level} / {self.player.max_power}"
-            power_level_surface = self.font_ui.render(power_level_text, True, WHITE)
-            self.screen.blit(power_level_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - power_level_surface.get_width()) // 2, 200))
-
-        # FPS表示
-        fps = clock.get_fps()
-        fps_text = f"FPS: {fps:.2f}"
-        fps_surface = self.font_ui.render(fps_text, True, WHITE)
-        # UIパネルの上部に中央揃えで表示
-        self.screen.blit(fps_surface, (GAME_AREA_WIDTH + (SCORE_PANEL_WIDTH - fps_surface.get_width()) // 2, 20))
 
     def check_score_award(self):
         """敵が倒されたかチェックし、スコアを加算する"""
@@ -530,33 +497,23 @@ class Game:
 
     def check_player_bullets_off_screen(self):
         """画面外に出たプレイヤーの弾をプールに戻す"""
-        if self.player:
-            for bullet in self.player.bullet_group:
-                if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
-                   bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
-                    if isinstance(bullet, HomingBullet):
-                        self.homing_bullet_pool.put(bullet)
-                    else:
-                        self.bullet_pool.put(bullet)
+        if not self.player:
+            return
+        # forループ内でリストを変更すると問題が起きるため、リストのコピーをイテレートする
+        for bullet in list(self.player.bullet_group):
+            is_off_screen = bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
+                            bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH
+            if is_off_screen or bullet.lifetime <= 0:
+                if isinstance(bullet, HomingBullet):
+                    self.homing_bullet_pool.put(bullet)
+                else:
+                    self.bullet_pool.put(bullet)
 
     def check_enemy_bullets_off_screen(self):
         """画面外に出た敵弾をプールに戻す"""
-        for bullet in self.enemy_bullets:
-            if bullet.rect.top > screen_height or bullet.rect.bottom < 0 or \
-               bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
-                self.enemy_bullet_pool.put(bullet)
-        if self.player:
-            for bullet in self.player.bullet_group:
-                if bullet.rect.bottom < 0 or bullet.rect.top > screen_height or \
-                   bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
-                    if isinstance(bullet, HomingBullet):
-                        self.homing_bullet_pool.put(bullet)
-                    else:
-                        self.bullet_pool.put(bullet)
-
-    def check_enemy_bullets_off_screen(self):
-        """画面外に出た敵弾をプールに戻す"""
-        for bullet in self.enemy_bullets:
-            if bullet.rect.top > screen_height or bullet.rect.bottom < 0 or \
-               bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH:
+        # forループ内でリストを変更すると問題が起きるため、リストのコピーをイテレートする
+        for bullet in list(self.enemy_bullets):
+            is_off_screen = bullet.rect.top > screen_height or bullet.rect.bottom < 0 or \
+                            bullet.rect.right < 0 or bullet.rect.left > GAME_AREA_WIDTH
+            if is_off_screen or (hasattr(bullet, 'lifetime') and bullet.lifetime is not None and bullet.lifetime <= 0):
                 self.enemy_bullet_pool.put(bullet)

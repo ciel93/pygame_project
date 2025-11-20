@@ -33,7 +33,7 @@ class GrandBossEnemy(BossEnemy):
         self.radius = self.rect.width / 2 * 0.9 # 当たり判定を画像の半径に合わせる
 
         # パターン切替時間を短くして、より頻繁に攻撃させる
-        self.pattern_change_time = 180 # 3秒
+        self.pattern_change_time = 240 # 4秒
 
         # 親クラスと同様にoriginal_imageを初期化
         self.original_image = self.image.copy()
@@ -45,7 +45,7 @@ class GrandBossEnemy(BossEnemy):
         # HPが半分以下になったら発狂モードに移行
         if not self.enrage_mode and self.health <= self.max_health / 2:
             self.enrage_mode = True
-            self.pattern_change_time = 160 # パターン切替を少し高速化（120から変更）
+            self.pattern_change_time = 200 # パターン切替を少し高速化
 
         self.pattern_timer += 1
         if self.pattern_timer > self.pattern_change_time:
@@ -90,7 +90,7 @@ class Stage1Boss(BossEnemy):
         self.radius = self.rect.width / 2 * 0.9
 
         # パターン切替時間を設定
-        self.pattern_change_time = 180 # 3秒
+        self.pattern_change_time = 240 # 4秒
 
     def create_pattern(self):
         """ステージ1ボス用のシンプルな攻撃パターン"""
@@ -147,7 +147,7 @@ class Stage2MidBoss(BossEnemy):
         self.radius = self.rect.width / 2 * 0.9
 
         # パターン切替時間
-        self.pattern_change_time = 200
+        self.pattern_change_time = 260
 
     def create_pattern(self):
         """ステージ2中ボス用の攻撃パターン"""

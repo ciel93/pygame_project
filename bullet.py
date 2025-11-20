@@ -29,14 +29,16 @@ class Bullet(pygame.sprite.Sprite):
 
         #移動
         self.speed = 8
+        self.lifetime = 300 # 弾の寿命（フレーム数）。60FPSで5秒
         self.direction = pygame.math.Vector2(0, -1) # 進行方向ベクトル
     def check_off_screen(self):
         # 弾がゲームエリアの上下左右いずれかの外に出たら消去する
         if self.rect.bottom < 0 or self.rect.top > screen_height or \
            self.rect.right < 0 or self.rect.left > GAME_AREA_WIDTH:
-            self.kill()
+            # self.kill() # ここでkillするとプールに戻らないため、コメントアウト
+            pass
    
-    def reset(self, x, y):
+    def reset(self, x, y, lifetime=300):
         """オブジェクトプールから再利用される際に状態をリセットする"""
         self.pos = pygame.math.Vector2(x, y)
         self.rect.midbottom = (x, y)
@@ -44,6 +46,7 @@ class Bullet(pygame.sprite.Sprite):
         self.index = 0
         self.animation() # 画像を初期状態に
 
+        self.lifetime = lifetime
     def animation(self):
         self.index += 0.05
         
@@ -84,12 +87,13 @@ class HomingBullet(Bullet):
         # 最初にターゲットを見つけたら、以降は再探索しない
         self.has_initial_target = False
 
-    def reset(self, x, y):
+    def reset(self, x, y, lifetime=480):
         """ホーミング弾用のリセットメソッド"""
-        super().reset(x, y)
+        super().reset(x, y, lifetime)
         self.rect.center = (x, y) # HomingBulletは中央から発射される
         self.target = None
         self.has_initial_target = False
+        self.lifetime = lifetime # ホーミング弾は少し長めの寿命
         # 発射直後は真上に飛ぶ
         self.direction = pygame.math.Vector2(0, -1)
 

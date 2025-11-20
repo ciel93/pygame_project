@@ -1,6 +1,6 @@
 #ウィンドウの設定
 GAME_AREA_WIDTH = 800
-SCORE_PANEL_WIDTH = 200
+SCORE_PANEL_WIDTH = 300
 screen_width = GAME_AREA_WIDTH + SCORE_PANEL_WIDTH
 screen_height = 800
 

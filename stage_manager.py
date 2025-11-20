@@ -159,6 +159,21 @@ class StageManager:
         if spawn_type == 'wave':
             x = random.choice([-30, GAME_AREA_WIDTH + 30])
             y = random.randint(80, 150)
+        elif spawn_type == 'tank':
+            # TankEnemyが密集しないように、他のTankEnemyとの距離をチェックする
+            min_dist = 100 # TankEnemy同士の最低距離
+            attempts = 0
+            while attempts < 20: # 20回試行して適切な場所を探す
+                x = random.randint(50, GAME_AREA_WIDTH - 50)
+                y = 10
+                
+                # 既存のTankEnemyとの距離をチェック
+                is_too_close = any(
+                    pygame.math.Vector2(x, y).distance_to(e.pos) < min_dist
+                    for e in self.enemy_group if isinstance(e, TankEnemy)
+                )
+                if not is_too_close: break
+                attempts += 1
         else:
             x = random.randint(50, GAME_AREA_WIDTH - 50)
             y = 10

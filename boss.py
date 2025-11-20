@@ -13,7 +13,7 @@ class BossEnemy(Enemy):
         self.health = 250
         self.max_health = 250
         self.pattern_timer = 0
-        self.pattern_change_time = 240 # パターン切替時間（フレーム数）
+        self.pattern_change_time = 300 # パターン切替時間（フレーム数）
         self.score_value = 100 # ボスのスコア
         self.pattern = 0
         self.angle = 0.0
@@ -71,6 +71,7 @@ class BossEnemy(Enemy):
             8: self._laevateinn_sweep,
             9: self._perfect_freeze, # 待機(9)を新しい攻撃で上書き
             10: self._scatter_shot_staggered, # 新しいパターンを追加
+            11: self._all_around_shot, # 新しい全周囲弾幕パターン
         }
 
     def move(self):
@@ -105,32 +106,37 @@ class BossEnemy(Enemy):
         # HPが半分以下になったら発狂モードに移行
         if not self.enrage_mode and self.health <= self.max_health / 2:
             self.enrage_mode = True
-            self.pattern_change_time = 180 # パターン切替を高速化
+            self.pattern_change_time = 240 # パターン切替を高速化
 
         # パターンを周期的に切り替えて弾を生成
         # パターン9（待機）の場合は、短い時間で次のパターンへ移行
         if self.pattern == 0: # wave_spread
             pattern_change_time = 360 # wave_spreadの時間を長くする
-        elif self.pattern == 11: # 新しい待機パターン番号
+        elif self.pattern == 12: # 新しい待機パターン番号
             pattern_change_time = 120
         else:
             pattern_change_time = self.pattern_change_time
 
         self.pattern_timer += 1
         if self.pattern_timer > pattern_change_time:
-            self.pattern_timer = 0
+            # all_around_shot (11) の実行中はパターンを切り替えない
+            if self.pattern == 11:
+                self.pattern_timer = 0 # タイマーのみリセットして継続
+                return
+
+            self.pattern_timer = 0 # タイマーリセットは共通
             if self.enrage_mode:
                 # 発狂モード: 激しい攻撃をランダムに選択
-                self.pattern = random.choice([4, 5, 6, 7, 9]) # パーフェクトフリーズ(9)を追加
+                self.pattern = random.choice([4, 5, 6, 7]) # レーヴァテイン(8)を削除
             else:
                 # 通常モード: パターンを順番に実行し、間に待機を挟む
-                if self.pattern != 11: # 待機パターンへ
-                    self.pattern = 11
+                if self.pattern != 12: # 待機パターンへ
+                    self.pattern = 12
                 else:
-                    # 待機が終わったら、次の攻撃パターンへ (0, 1, 2, 10をループ)
-                    # 0->1->2->10->0...
-                    current_pattern_index = [0, 1, 2, 10].index(self.last_attack_pattern)
-                    self.last_attack_pattern = [0, 1, 2, 10][(current_pattern_index + 1) % 4]
+                    # 待機が終わったら、次の攻撃パターンへ (0, 1, 2, 10, 11をループ)
+                    attack_rotation = [0, 1, 2, 10, 11]
+                    current_pattern_index = attack_rotation.index(self.last_attack_pattern) if self.last_attack_pattern in attack_rotation else -1
+                    self.last_attack_pattern = attack_rotation[(current_pattern_index + 1) % len(attack_rotation)]
                     self.pattern = self.last_attack_pattern
 
         # ディスパッチテーブルを使って攻撃パターンを実行
@@ -376,6 +382,20 @@ class BossEnemy(Enemy):
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(pos.x, pos.y, self.player_group, speed=2.5, direction=direction_outward, bullet_type='ice', frozen_duration=current_frozen_duration)
 
+    def _all_around_shot(self):
+        """全方位に弾を発射する通常弾幕"""
+        if self.pattern_timer % 20 == 0: # 20フレームごとに発射
+            num_bullets = 12 # 12方向
+
+            # 毎回少し角度をずらして、螺旋状に見せる
+            angle_offset = math.radians(self.pattern_timer) # 緩やかな回転
+            
+            for i in range(num_bullets):
+                angle = (2 * math.pi / num_bullets) * i + angle_offset
+                direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
+                bullet = self.enemy_bullet_pool.get()
+                bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0.8, direction=direction)
+
     def check_death(self):
         # 倒された最初のフレームでフラグを立てる
         if self.alive == False and self.explosion == False and not self.just_defeated:
@@ -384,8 +404,16 @@ class BossEnemy(Enemy):
 
     def update(self):
         # Boss は敵基底 update を参考にして動作させる
-        # うずまき弾(pattern 5)発射中は移動を停止する
-        if self.pattern != 5:
+        # 特定の弾幕発射中の移動制御
+        if self.pattern == 11: # all_around_shot
+            # X軸の中央に移動して静止
+            target_x = GAME_AREA_WIDTH // 2
+            dx = target_x - self.pos.x
+            # 十分に近づいたら移動を停止
+            if abs(dx) > 1:
+                self.pos.x += dx * 0.05 # スムーズに移動
+            self.rect.centerx = int(self.pos.x)
+        elif self.pattern != 5: # うずまき弾(pattern 5)発射中は移動を停止
             self.move()
         self.create_pattern()
         super().update(move_override=True)

@@ -10,7 +10,7 @@ class ScatterEnemy(Enemy):
     def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
         super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
         self.speed = 1.0       # ゆっくり移動
-        self.health = 15       # HPを大幅に増加
+        self.health = 30       # HPを大幅に増加
         self.score_value = 50  # ScatterEnemyのスコア
 
         # 画像の設定
@@ -68,8 +68,8 @@ class ScatterEnemy(Enemy):
                 self.fire_timer = 0
                 self.shots_fired += 1
                 
-                n = 5  # 5-way弾
-                spread_angle_deg = 45
+                n = 7  # 7-way弾
+                spread_angle_deg = 90 # 弾が広がる角度を大きくする
                 
                 # プレイヤーの方向を基準にする
                 if self.player_group and self.player_group.sprite:

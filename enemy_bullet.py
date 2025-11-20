@@ -169,8 +169,8 @@ class EnemyBullet(pygame.sprite.Sprite):
                 self.is_frozen = False
 
     def check_off_screen(self):
-        if self.rect.top > screen_height or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > GAME_AREA_WIDTH:
-            self.kill()
+        # 画面外に出た際のkillはGameクラスのオブジェクトプール管理に任せる
+        pass
 
     def collision_target(self):
         # ターゲットグループに take_damage メソッドを持つスプライトが存在する場合のみ判定
@@ -199,14 +199,12 @@ class EnemyBullet(pygame.sprite.Sprite):
             if self.has_lifetime:
                 self.lifetime -= 1
                 if self.lifetime <= 0:
-                    self.kill()
                     return
             return # 凍結中はここで処理を中断
         self.move()
 
         # 渦巻き弾(vortex)や氷弾(ice)は円形なので、負荷の高い回転処理をスキップする
         if self.bullet_type == 'laser':
-            # レーザーの場合：画像の底辺中央(midbottom)を基点として回転させる
             angle = -self.direction.angle_to(pygame.math.Vector2(0, 1))
             self.image = pygame.transform.rotate(self.original_image, angle)
             self.rect = self.image.get_rect(midbottom=self.pos)
@@ -214,14 +212,10 @@ class EnemyBullet(pygame.sprite.Sprite):
             # それ以外の弾は、画像の中心を軸として進行方向に合わせて回転
             angle = -self.direction.angle_to(pygame.math.Vector2(0, 1))
             # 毎フレーム回転させると画質が劣化するので、元の画像を保持し、それを回転させる
-            self.image = pygame.transform.rotate(self.original_image, angle) 
+            self.image = pygame.transform.rotate(self.original_image, angle)
             self.rect = self.image.get_rect(center=self.pos)
 
         self.check_off_screen()
         # self.collision_target() # 衝突判定はGameクラスのQuadtreeで行うためコメントアウト
 
         # 寿命を更新
-        if self.has_lifetime:
-            self.lifetime -= 1
-            if self.lifetime <= 0:
-                self.kill()
