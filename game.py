@@ -26,12 +26,14 @@ class Game:
             self.enemy_bullet_sound = pygame.mixer.Sound('assets/sound/enemybullet.wav')
             self.boss_bullet_sound = pygame.mixer.Sound('assets/sound/boss_bullet.wav')
             self.explosion_sound = pygame.mixer.Sound('assets/sound/explosion.wav')
+            self.laevateinn_sound = pygame.mixer.Sound('assets/sound/laevateinn.wav')
         except pygame.error:
             self.laser_sound = None # ファイルがない場合はNoneに
             self.bomb_sound = None
             self.enemy_bullet_sound = None
             self.boss_bullet_sound = None
             self.explosion_sound = None
+            self.laevateinn_sound = None
 
         #グループの作成
         self.create_group()
@@ -83,7 +85,7 @@ class Game:
         self.bg_y = 0
 
         # ステージ管理
-        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group, self.enemy_bullet_pool, self.enemy_bullet_sound, self.boss_bullet_sound, self.explosion_sound)
+        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group, self.enemy_bullet_pool, self.enemy_bullet_sound, self.boss_bullet_sound, self.explosion_sound, self.laevateinn_sound)
 
         #ゲームオーバー
         self.game_over = False
@@ -143,7 +145,7 @@ class Game:
         self.no_miss_status = True # リセット時にノーミス状態に戻す
         
         # ステージマネージャーをリセットしてステージ1から再開
-        self.stage_manager.reset(self.enemy_bullet_sound, self.boss_bullet_sound, self.explosion_sound)
+        self.stage_manager.reset(self.enemy_bullet_sound, self.boss_bullet_sound, self.explosion_sound, self.laevateinn_sound)
         # 背景画像をステージ1のものに戻す
         self.bg_img = self.bg_images[0]
 

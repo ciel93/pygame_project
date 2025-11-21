@@ -2,7 +2,10 @@ import pygame
 from setting import *
 from game import Game
 
+# サウンドの初期化（チャンネル数を増やす）
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
+pygame.mixer.set_num_channels(128) # 同時再生可能なチャンネル数を128に増やす
 
 #ウィンドウの作成
 screen = pygame.display.set_mode((screen_width, screen_height))

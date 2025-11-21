@@ -4,11 +4,11 @@ from setting import *
 from enemy import Enemy
 from enemy_subclasses import FastEnemy, TankEnemy, WaveEnemy, HunterEnemy, ScatterEnemy
 from boss import BossEnemy
-from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss, SecretBoss
+from boss_subclasses import GrandBossEnemy, Stage1Boss, Stage2MidBoss
 
 class StageManager:
     """ステージ進行と敵の出現を管理するクラス"""
-    def __init__(self, enemy_group, player_group, item_group, enemy_bullet_pool=None, enemy_bullet_sound=None, boss_bullet_sound=None, explosion_sound=None):
+    def __init__(self, enemy_group, player_group, item_group, enemy_bullet_pool=None, enemy_bullet_sound=None, boss_bullet_sound=None, explosion_sound=None, laevateinn_sound=None):
         self.enemy_group = enemy_group
         self.player_group = player_group
         self.item_group = item_group
@@ -16,6 +16,7 @@ class StageManager:
         self.enemy_bullet_sound = enemy_bullet_sound
         self.boss_bullet_sound = boss_bullet_sound
         self.explosion_sound = explosion_sound
+        self.laevateinn_sound = laevateinn_sound
 
         self.stage_schedules = {
             1: [ # ステージ1
@@ -192,7 +193,6 @@ class StageManager:
             'stage1_boss': Stage1Boss,
             'stage2_mid_boss': Stage2MidBoss,
             'grand_boss': GrandBossEnemy,
-            'secret_boss': SecretBoss,
         }
 
         enemy_class = enemy_map.get(spawn_type, Enemy)
@@ -201,16 +201,16 @@ class StageManager:
             y = -80 if spawn_type != 'grand_boss' else -120
             x = GAME_AREA_WIDTH // 2
 
-            # 最終ボス出現時にノーミスなら隠しボスに差し替える
-            if spawn_type == 'grand_boss' and no_miss_status:
-                enemy_class = enemy_map['secret_boss']
-
         sound_to_use = self.boss_bullet_sound if 'boss' in spawn_type else self.enemy_bullet_sound
-        enemy_class(self.enemy_group, x, y, player.bullet_group, self.player_group, enemy_bullets, self.item_group, enemy_bullet_pool=self.enemy_bullet_pool, enemy_bullet_sound=sound_to_use, explosion_sound=self.explosion_sound)
+        
+        # ボス系にのみレーヴァテインサウンドを渡す
+        laevateinn_sound_to_use = self.laevateinn_sound if 'boss' in spawn_type else None
+        enemy_class(self.enemy_group, x, y, player.bullet_group, self.player_group, enemy_bullets, self.item_group, enemy_bullet_pool=self.enemy_bullet_pool, enemy_bullet_sound=sound_to_use, explosion_sound=self.explosion_sound, laevateinn_sound=laevateinn_sound_to_use)
 
-    def reset(self, enemy_bullet_sound=None, boss_bullet_sound=None, explosion_sound=None):
+    def reset(self, enemy_bullet_sound=None, boss_bullet_sound=None, explosion_sound=None, laevateinn_sound=None):
         """ステージマネージャーの状態をリセットする"""
         self.enemy_bullet_sound = enemy_bullet_sound
         self.boss_bullet_sound = boss_bullet_sound
         self.explosion_sound = explosion_sound
+        self.laevateinn_sound = laevateinn_sound
         self.start_stage(1)

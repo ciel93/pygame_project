@@ -70,7 +70,7 @@ class Player(pygame.sprite.Sprite):
         self.bomb_sound = bomb_sound # ボム発射音
 
         #体力
-        self.health = 3
+        self.health = 5
         self.alive = True
 
         # ボム関連
@@ -158,8 +158,9 @@ class Player(pygame.sprite.Sprite):
                 b3.reset(self.rect.centerx + 20, self.rect.centery)
 
             # 発射音を再生
+            # 同じ音が再生中でなければ再生する
             if self.laser_sound:
-                self.laser_sound.play()
+                pygame.mixer.find_channel(True).play(self.laser_sound)
 
             self.fire = True
 
@@ -176,8 +177,9 @@ class Player(pygame.sprite.Sprite):
         self.bomb_active = True
         self.bomb_timer = self.bomb_cooldown
         self.bomb_just_activated = True # ボムが発動されたことを示すフラグを立てる
+        # 同じ音が再生中でなければ再生する
         if self.bomb_sound:
-            self.bomb_sound.play()
+            pygame.mixer.find_channel(True).play(self.bomb_sound)
         MasterSpark(self.bomb_group, self, self.game)
 
     def cooldown_bullet(self):
