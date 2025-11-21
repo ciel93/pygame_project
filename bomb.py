@@ -12,9 +12,9 @@ class MasterSpark(pygame.sprite.Sprite):
         self.screen = pygame.display.get_surface()
 
         # レーザーの基本設定
-        self.duration = 180  # 3秒間持続
+        self.duration = 300  # 5秒間持続
         self.timer = self.duration
-        self.damage = 0.5  # 1フレームあたりのダメージ
+        self.damage = 0.3  # 1フレームあたりのダメージ
         self.score_per_bullet = 50 # 敵弾1つあたりのスコア
 
         # プレイヤーが持つ敵グループへの参照を取得

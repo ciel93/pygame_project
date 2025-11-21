@@ -7,8 +7,8 @@ from setting import *
 
 class BossEnemy(Enemy):
     """ボス：HP大・パターン切替え・視覚的に目立つ"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
         self.speed = 1.0
         self.health = 350
         self.max_health = 350
@@ -153,6 +153,8 @@ class BossEnemy(Enemy):
                 # V字に広がるように、各弾に少しだけ横方向のベクトルを与える
                 direction_x = i * 0.08
                 direction = pygame.math.Vector2(direction_x, 1).normalize()
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(x, y, self.player_group, speed=speed, direction=direction)
             self.angle += 0.18
@@ -164,6 +166,8 @@ class BossEnemy(Enemy):
                 x = int(self.rect.centerx + i * 25) # 弾同士の間隔をさらに広げる
                 y = self.rect.centery + 10
                 speed = 1.8 + abs(i) * 0.08
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(x, y, self.player_group, speed=speed)
 
@@ -180,6 +184,8 @@ class BossEnemy(Enemy):
                 # 各弾の角度を計算
                 angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i
                 direction = pygame.math.Vector2(math.cos(angle), math.sin(angle)) # directionを定義
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
     
@@ -194,6 +200,8 @@ class BossEnemy(Enemy):
             for i in range(n):
                 angle = center_angle_rad - spread_angle_rad / 2 + (spread_angle_rad / max(1, n - 1)) * i + angle_shift_for_column
                 direction = pygame.math.Vector2(math.cos(angle), math.sin(angle)) # directionを定義
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(self.rect.centerx, self.rect.bottom, self.player_group, speed=2.8, direction=direction)
             self.scatter_shot_column_counter += 1 # カウンターをインクリメント
@@ -212,6 +220,8 @@ class BossEnemy(Enemy):
                     direction = pygame.math.Vector2(dx, dy).normalize()
                 bullet_speed = 3.0
                 # 弾を生成（プレイヤーを狙う）
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(self.rect.centerx,
                              self.rect.bottom,
@@ -228,11 +238,15 @@ class BossEnemy(Enemy):
             
             # 螺旋1
             x1 = center_x + amplitude * math.sin(self.angle) # x1を定義
+            if self.enemy_bullet_sound:
+                self.enemy_bullet_sound.play()
             bullet1 = self.enemy_bullet_pool.get()
             bullet1.reset(x1, self.rect.bottom, self.player_group, speed=3.5)
 
             # 螺旋2（位相を180度ずらす）
             x2 = center_x + amplitude * math.sin(self.angle + math.pi) # x2を定義
+            if self.enemy_bullet_sound:
+                self.enemy_bullet_sound.play()
             bullet2 = self.enemy_bullet_pool.get()
             bullet2.reset(x2, self.rect.bottom, self.player_group, speed=3.5)
 
@@ -255,6 +269,8 @@ class BossEnemy(Enemy):
                     else:
                         direction = pygame.math.Vector2(dx, dy).normalize()
                     
+                    if self.enemy_bullet_sound:
+                        self.enemy_bullet_sound.play()
                     bullet = self.enemy_bullet_pool.get()
                     bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction, radius=16, bullet_type='homing')
 
@@ -264,6 +280,8 @@ class BossEnemy(Enemy):
                 # 時計回りの渦
                 current_angle = self.vortex_angle + angle_offset
                 direction = pygame.math.Vector2(math.cos(current_angle), math.sin(current_angle)) # directionを定義
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=1.5, direction=direction, bullet_type='vortex')
 
@@ -271,6 +289,8 @@ class BossEnemy(Enemy):
                 # 反時計回りの渦
                 current_angle_rev = -self.vortex_angle + angle_offset
                 direction_rev = pygame.math.Vector2(math.cos(current_angle_rev), math.sin(current_angle_rev))
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 EnemyBullet(self.enemy_bullets, self.rect.centerx, self.rect.centery, self.player_group, speed=1.0, direction=direction_rev, bullet_type='vortex_rev')
 
             self.vortex_angle += rotation_speed # 角度を更新して渦全体を回転させる
@@ -287,6 +307,8 @@ class BossEnemy(Enemy):
             
             # 細長いレーザー弾を生成
             # radiusを大きくしてレーザーをさらに太くする
+            if self.enemy_bullet_sound:
+                self.enemy_bullet_sound.play()
             bullet = self.enemy_bullet_pool.get()
             bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=speed, direction=direction, radius=32, length=150, color=(255, 50, 255), bullet_type='laser')
 
@@ -302,6 +324,8 @@ class BossEnemy(Enemy):
             x = random.randint(0, GAME_AREA_WIDTH)
             speed = random.uniform(2.5, 5.0)
             # 弾の色を青みがかった色にする
+            if self.enemy_bullet_sound:
+                self.enemy_bullet_sound.play()
             bullet = self.enemy_bullet_pool.get()
             bullet.reset(x, 0, self.player_group, speed=speed, bullet_type='ice')
 
@@ -339,6 +363,8 @@ class BossEnemy(Enemy):
                     radius = 6 + (i / sword_length) * 8
                     red_val = 150 + (i / sword_length) * 105
                     bullet = self.enemy_bullet_pool.get()
+                    if self.enemy_bullet_sound:
+                        self.enemy_bullet_sound.play()
                     bullet.reset(pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20), frozen_duration=4)
         # フェーズ3: 横移動しながら剣を突き出す
         else:
@@ -359,6 +385,8 @@ class BossEnemy(Enemy):
                     radius = 10 + (i / sword_length) * 12
                     red_val = 150 + (i / sword_length) * 105 # red_valを定義
                     bullet = self.enemy_bullet_pool.get()
+                    if self.enemy_bullet_sound:
+                        self.enemy_bullet_sound.play()
                     bullet.reset(pos.x, pos.y, self.player_group, speed=speed, direction=direction, radius=radius, color=(red_val, 50, 20))
 
     def _perfect_freeze(self):
@@ -379,13 +407,15 @@ class BossEnemy(Enemy):
                 # 弾の発射方向（中心から外側へ）
                 direction_outward = pos_offset.normalize()
                 current_frozen_duration = base_frozen_duration + (i * delay_per_bullet) # current_frozen_durationを定義
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 bullet.reset(pos.x, pos.y, self.player_group, speed=2.5, direction=direction_outward, bullet_type='ice', frozen_duration=current_frozen_duration)
 
     def _all_around_shot(self):
         """全方位に弾を発射する通常弾幕"""
-        if self.pattern_timer % 20 == 0:  # 20フレームごとに発射
-            num_directions = 10  # 10方向 (隙間を広げる)
+        if self.pattern_timer % 25 == 0:  # 25フレームごとに発射（間隔を広げる）
+            num_directions = 8  # 8方向 (隙間をさらに広げる)
             num_bullets_per_direction = 3  # 各方向に3発の弾を発射
             spread_angle = 0.2  # 弾の広がり具合を大きくする（ラジアン）
 
@@ -398,6 +428,8 @@ class BossEnemy(Enemy):
                     # 弾ごとに少し角度をずらす
                     angle = base_angle + (j - (num_bullets_per_direction - 1) / 2) * spread_angle
                     direction = pygame.math.Vector2(math.cos(angle), math.sin(angle))
+                    if self.enemy_bullet_sound:
+                        self.enemy_bullet_sound.play()
                     bullet = self.enemy_bullet_pool.get()
                     bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0.8, direction=direction)
 
@@ -408,6 +440,8 @@ class BossEnemy(Enemy):
                 direction_to_player = (player.pos - self.pos).normalize()
                 
                 # 狙い弾を生成
+                if self.enemy_bullet_sound:
+                    self.enemy_bullet_sound.play()
                 bullet = self.enemy_bullet_pool.get()
                 # 速度を速くし、見た目を変えるためにbullet_typeとradiusを指定
                 bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=2.5, direction=direction_to_player, radius=12, bullet_type='homing')

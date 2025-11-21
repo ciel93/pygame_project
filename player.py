@@ -10,7 +10,7 @@ class Player(pygame.sprite.Sprite):
     # 画像をキャッシュするためのクラス変数
     _image_cache = {}
 
-    def __init__(self, groups, x, y, game, enemy_group, enemy_bullets_group=None, item_group=None, bullet_pool=None, homing_bullet_pool=None):
+    def __init__(self, groups, x, y, game, enemy_group, enemy_bullets_group=None, item_group=None, bullet_pool=None, homing_bullet_pool=None, laser_sound=None, bomb_sound=None):
         super().__init__(groups)
 
         self.screen = pygame.display.get_surface()
@@ -62,9 +62,12 @@ class Player(pygame.sprite.Sprite):
         self.timer = 0
         self.power = 0 # 新しい統合パワーシステム
         self.max_power = 700 # 最大パワー
+        self.fire_cooldown = 10 # 通常弾の発射クールダウン
         # ホーミング弾専用のタイマーとクールダウン
         self.homing_timer = 0
         self.homing_cooldown = 20 # 通常弾の2倍の間隔
+        self.laser_sound = laser_sound # 発射音
+        self.bomb_sound = bomb_sound # ボム発射音
 
         #体力
         self.health = 3
@@ -115,6 +118,10 @@ class Player(pygame.sprite.Sprite):
                 self.mask = pygame.mask.from_surface(self.image)
 
         shot_level = self.power // 100
+        
+        # パワーレベルに応じて発射クールダウンを更新
+        # レベルが上がるごとにクールダウンを1減らし、最低でも4フレームにする
+        self.fire_cooldown = max(4, 10 - shot_level)
 
         if key[pygame.K_z] and not self.fire and not self.bomb_active:
             # パワーレベルに応じて弾を発射
@@ -150,6 +157,10 @@ class Player(pygame.sprite.Sprite):
                 b3 = self.bullet_pool.get()
                 b3.reset(self.rect.centerx + 20, self.rect.centery)
 
+            # 発射音を再生
+            if self.laser_sound:
+                self.laser_sound.play()
+
             self.fire = True
 
         # ボムの発動
@@ -165,12 +176,14 @@ class Player(pygame.sprite.Sprite):
         self.bomb_active = True
         self.bomb_timer = self.bomb_cooldown
         self.bomb_just_activated = True # ボムが発動されたことを示すフラグを立てる
+        if self.bomb_sound:
+            self.bomb_sound.play()
         MasterSpark(self.bomb_group, self, self.game)
 
     def cooldown_bullet(self):
         if self.fire:
             self.timer += 1
-        if self.timer > 10:
+        if self.timer > self.fire_cooldown:
             self.fire = False
             self.timer = 0
 

@@ -7,8 +7,8 @@ from setting import *
 
 class ScatterEnemy(Enemy):
     """撃破されると全方位に弾をばらまく設置型の敵"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
         self.speed = 1.0       # ゆっくり移動
         self.health = 30       # HPを大幅に増加
         self.score_value = 50  # ScatterEnemyのスコア
@@ -115,8 +115,8 @@ class ScatterEnemy(Enemy):
 
 class FastEnemy(Enemy):
     """素早く動いて少ないHPの敵、スポーン時に停止して自機狙い弾を発射"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
         self.speed = 3          # 速く移動
         self.health = 1         # 低HP
         self.score_value = 20   # FastEnemyのスコア
@@ -213,8 +213,8 @@ class FastEnemy(Enemy):
 
 class TankEnemy(Enemy):
     """遅いが耐久力のある敵、サイン波移動＋ランダム突進（バースト）"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
         self.speed = 0.5       # 基本の縦速度
         self.health = 6        # 高HP
         self.score_value = 30  # TankEnemyのスコア
@@ -326,8 +326,8 @@ class TankEnemy(Enemy):
 
 class WaveEnemy(Enemy):
     """波のように上下に揺れながら横に移動する敵"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
         self.speed = 2.5  # 横方向の基本速度
         self.health = 2
         self.score_value = 25 # WaveEnemyのスコア
@@ -388,8 +388,8 @@ class WaveEnemy(Enemy):
 
 class HunterEnemy(Enemy):
     """プレイヤーを追いかけ、狙い撃ちしてくる強化された敵"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
         self.speed = 2.0       # 追尾速度
         self.health = 4        # 少し高めのHP
         self.score_value = 40  # HunterEnemyのスコア

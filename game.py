@@ -19,8 +19,26 @@ class Game:
         # UI表示用のフォントを準備
         self.font_ui = pygame.font.Font(None, 30)
 
+        # サウンドの読み込み
+        try:
+            self.laser_sound = pygame.mixer.Sound('assets/sound/playerbullet.wav')
+            self.bomb_sound = pygame.mixer.Sound('assets/sound/bomb.wav')
+            self.enemy_bullet_sound = pygame.mixer.Sound('assets/sound/enemybullet.wav')
+            self.boss_bullet_sound = pygame.mixer.Sound('assets/sound/boss_bullet.wav')
+            self.explosion_sound = pygame.mixer.Sound('assets/sound/explosion.wav')
+        except pygame.error:
+            self.laser_sound = None # ファイルがない場合はNoneに
+            self.bomb_sound = None
+            self.enemy_bullet_sound = None
+            self.boss_bullet_sound = None
+            self.explosion_sound = None
+
         #グループの作成
         self.create_group()
+
+        # サウンドの音量設定
+        if self.boss_bullet_sound:
+            self.boss_bullet_sound.set_volume(0.5) # ボスの弾幕音量を50%に設定
 
         # 衝突判定用のQuadtreeを種類別に作成
         boundary = pygame.Rect(0, 0, GAME_AREA_WIDTH, screen_height)
@@ -46,7 +64,7 @@ class Game:
         )
 
         #自機
-        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
+        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool, self.laser_sound, self.bomb_sound)
         
         #背景
         self.bg_images = []
@@ -65,7 +83,7 @@ class Game:
         self.bg_y = 0
 
         # ステージ管理
-        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group, self.enemy_bullet_pool)
+        self.stage_manager = StageManager(self.enemy_group, self.player_group, self.item_group, self.enemy_bullet_pool, self.enemy_bullet_sound, self.boss_bullet_sound, self.explosion_sound)
 
         #ゲームオーバー
         self.game_over = False
@@ -99,7 +117,7 @@ class Game:
     def reset_game(self):
         """ゲームの状態を完全に初期化する"""
         # プレイヤーを再生成
-        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool)
+        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool, self.laser_sound, self.bomb_sound)
 
         # 画面上の全オブジェクトをそれぞれのプールに戻す
         if self.player:
@@ -125,7 +143,7 @@ class Game:
         self.no_miss_status = True # リセット時にノーミス状態に戻す
         
         # ステージマネージャーをリセットしてステージ1から再開
-        self.stage_manager.reset()
+        self.stage_manager.reset(self.enemy_bullet_sound, self.boss_bullet_sound, self.explosion_sound)
         # 背景画像をステージ1のものに戻す
         self.bg_img = self.bg_images[0]
 

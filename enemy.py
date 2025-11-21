@@ -9,7 +9,7 @@ class Enemy(pygame.sprite.Sprite):
     # 画像をキャッシュするためのクラス変数
     _image_cache = {}
 
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None):
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
         super().__init__(groups)
 
         self.screen = pygame.display.get_surface()
@@ -26,6 +26,8 @@ class Enemy(pygame.sprite.Sprite):
         # enemy_bullets_group が渡されていればそれを使い、なければローカルグループを作る
         self.enemy_bullets = enemy_bullets_group if enemy_bullets_group is not None else pygame.sprite.Group()
         self.enemy_bullet_pool = enemy_bullet_pool # 敵弾のプール
+        self.enemy_bullet_sound = enemy_bullet_sound # 敵弾発射音
+        self.explosion_sound = explosion_sound # 爆発音
         self.fire_timer = 0
 
         #画像
@@ -84,6 +86,9 @@ class Enemy(pygame.sprite.Sprite):
                     y = self.rect.bottom + 6
                     speed = random.uniform(1.5, 3.0) # 弾速を遅くする
                     # 弾は self.enemy_bullets（共有グループ）に追加される
+                    if self.enemy_bullet_sound:
+                        self.enemy_bullet_sound.play()
+
                     bullet = self.enemy_bullet_pool.get()
                     bullet.reset(x, y, self.player_group, speed=speed)
 
@@ -123,6 +128,8 @@ class Enemy(pygame.sprite.Sprite):
                     item_type = None
                 if item_type:
                     Item(self.item_group, self.rect.center, item_type)
+            if self.explosion_sound:
+                self.explosion_sound.play()
             explosion = Explosion(self.explosion_group, self.rect.centerx, self.rect.centery)
             self.explosion = True
         # 爆発アニメーションが完了したら（explosion_groupが空になったら）自身を消滅させる
