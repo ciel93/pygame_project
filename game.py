@@ -107,6 +107,15 @@ class Game:
     def player_death(self):
         if len(self.player_group) == 0 and not self.game_over: # game_overフラグが既にTrueでない場合のみ実行
             self.game_over = True
+
+            # ゲームオーバー時にプレイヤーの弾をプールに戻す
+            if self.player:
+                for bullet in list(self.player.bullet_group):
+                    if isinstance(bullet, HomingBullet):
+                        self.homing_bullet_pool.put(bullet)
+                    else:
+                        self.bullet_pool.put(bullet)
+
             draw_text(self.screen, 'game over', GAME_AREA_WIDTH // 2, screen_height //2 ,75 , RED)
             self.player = None # プレイヤーオブジェクトへの参照を削除
             self.stage_manager.spawn_active = False # 敵の出現を停止
@@ -118,16 +127,18 @@ class Game:
 
     def reset_game(self):
         """ゲームの状態を完全に初期化する"""
-        # プレイヤーを再生成
-        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool, self.laser_sound, self.bomb_sound)
-
         # 画面上の全オブジェクトをそれぞれのプールに戻す
+        # プレイヤーを再生成する前に実行する
         if self.player:
             for bullet in list(self.player.bullet_group):
                 if isinstance(bullet, HomingBullet):
                     self.homing_bullet_pool.put(bullet)
                 else:
                     self.bullet_pool.put(bullet)
+
+        # プレイヤーを再生成
+        self.player = Player(self.player_group, GAME_AREA_WIDTH // 2, 500, self, self.enemy_group, self.enemy_bullets, self.item_group, self.bullet_pool, self.homing_bullet_pool, self.laser_sound, self.bomb_sound)
+
         for bullet in list(self.enemy_bullets):
             self.enemy_bullet_pool.put(bullet)
 

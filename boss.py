@@ -111,7 +111,7 @@ class BossEnemy(Enemy):
         # パターンを周期的に切り替えて弾を生成
         # パターン9（待機）の場合は、短い時間で次のパターンへ移行
         if self.pattern == 0: # wave_spread
-            pattern_change_time = 360 # wave_spreadの時間を長くする
+            pattern_change_time = 480 # wave_spreadの時間を長くする
         elif self.pattern == 12: # 新しい待機パターン番号
             pattern_change_time = 120
         else:
@@ -413,7 +413,7 @@ class BossEnemy(Enemy):
 
     def _all_around_shot(self):
         """全方位に弾を発射する通常弾幕"""
-        if self.pattern_timer % 25 == 0:  # 25フレームごとに発射（間隔を広げる）
+        if self.pattern_timer % 60 == 0:  # 60フレームごとに発射（間隔を広げる）
             num_directions = 8  # 8方向 (隙間をさらに広げる)
             num_bullets_per_direction = 3  # 各方向に3発の弾を発射
             spread_angle = 0.2  # 弾の広がり具合を大きくする（ラジアン）
@@ -433,7 +433,7 @@ class BossEnemy(Enemy):
                     bullet.reset(self.rect.centerx, self.rect.centery, self.player_group, speed=0.8, direction=direction)
 
         # 一定間隔でプレイヤーを狙う弾を追加
-        if self.pattern_timer % 60 == 0: # 発射間隔を調整
+        if self.pattern_timer % 90 == 0: # 発射間隔を調整
             if self.player_group and self.player_group.sprite:
                 player = self.player_group.sprite
                 direction_to_player = (player.pos - self.pos).normalize()

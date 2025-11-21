@@ -7,8 +7,8 @@ from boss import BossEnemy
 
 class GrandBossEnemy(BossEnemy):
     """ゲームの最終ボス（大ボス）"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None, laevateinn_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound, laevateinn_sound)
         
         # 大ボス専用のパラメータで上書き
         self.health = 600  # HPを大幅に増やす
@@ -68,8 +68,8 @@ class GrandBossEnemy(BossEnemy):
 
 class Stage1Boss(BossEnemy):
     """ステージ1専用のボス"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None, laevateinn_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound, laevateinn_sound)
         
         # ステージ1ボス専用のパラメータで上書き
         self.health = 250
@@ -117,8 +117,8 @@ class Stage1Boss(BossEnemy):
 
 class Stage2MidBoss(BossEnemy):
     """ステージ2の中ボス"""
-    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None):
-        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound)
+    def __init__(self, groups, x, y, bullet_group, player_group=None, enemy_bullets_group=None, item_group=None, enemy_bullet_pool=None, enemy_bullet_sound=None, explosion_sound=None, laevateinn_sound=None):
+        super().__init__(groups, x, y, bullet_group, player_group, enemy_bullets_group, item_group, enemy_bullet_pool, enemy_bullet_sound, explosion_sound, laevateinn_sound)
         
         # ステージ2中ボス専用のパラメータ
         self.health = 450
