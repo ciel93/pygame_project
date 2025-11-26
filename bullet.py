@@ -120,14 +120,19 @@ class HomingBullet(Bullet):
         if self.target and self.target.alive:
             # ターゲットへの方向ベクトルを計算し、滑らかに追尾
             if (self.target.rect.center - self.pos).length_squared() > 0:
-                target_direction = (pygame.math.Vector2(self.target.rect.center) - self.pos).normalize()
-                
-                # 2つのベクトルがほぼ180度反対向きの場合、slerpは未定義になるためエラーを回避
-                if self.direction.dot(target_direction) < -0.99:
-                    # 代わりに線形補間(lerp)を使用して方向を少しだけ変える
-                    self.direction = self.direction.lerp(target_direction, self.turn_speed * 0.02)
+                target_direction = (pygame.math.Vector2(self.target.rect.center) - self.pos)
+                if target_direction.length_squared() > 0:
+                    target_direction.normalize_ip()
+
+                    # 2つのベクトルがほぼ180度反対向きの場合、slerpは未定義になるためエラーを回避
+                    if self.direction.dot(target_direction) < -0.999:
+                        # 代わりに線形補間(lerp)を使用して方向を少しだけ変える
+                        self.direction = self.direction.lerp(target_direction, self.turn_speed * 0.02)
+                    else:
+                        self.direction = self.direction.slerp(target_direction, self.turn_speed * 0.02)
                 else:
-                    self.direction = self.direction.slerp(target_direction, self.turn_speed * 0.02)
+                    # ターゲットが弾の位置と完全に一致した場合、移動を停止しないように現在の方向を維持
+                    pass
         
         self.pos += self.direction * self.speed
         self.rect.center = self.pos
@@ -140,8 +145,8 @@ class HomingBullet(Bullet):
         # 親クラスのアニメーションを呼び出して、self.image を更新
         self.animation()
 
-        # 進行方向ベクトルから角度を計算 (上方向が0度)
-        angle = -self.direction.angle_to(pygame.math.Vector2(0, -1))
+        # 進行方向ベクトルから角度を計算 (as_polar()を使い、90度オフセットを引く)
+        angle = -self.direction.as_polar()[1] - 90
 
         # 毎回、画質が劣化していないアニメーション用の元画像(self.pre_image)を
         # スケールしてから回転させることで、画質の劣化を防ぐ

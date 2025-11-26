@@ -145,9 +145,9 @@ class BossEnemy(Enemy):
     def _wave_spread(self):
         # 横に波打つように縦列で弾を連続発射（少しずつ横ずれ）
         if self.pattern_timer % 25 == 0: # 発射間隔を少し戻す
-            offset = math.sin(self.angle) * 80 # 横の揺れ幅を大きくして「広く」
+            offset = math.sin(self.angle) * 150 # 横の揺れ幅を大きくして「広く」
             for i in range(-4,5): # 発射数9発
-                x = int(self.rect.centerx + offset + i*20) # 弾同士の間隔も広げる
+                x = int(self.rect.centerx + offset + i*30) # 弾同士の間隔も広げる
                 y = self.rect.bottom + 6
                 speed = 2.0 # 弾速を少し上げる
                 # V字に広がるように、各弾に少しだけ横方向のベクトルを与える
