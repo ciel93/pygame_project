@@ -30,7 +30,10 @@ class StageManager:
                 {'start': 30000,  'type': 'stage1_boss', 'count': 1, 'interval': 0}, # ステージ1の最初のボス
                 {'start': 38000,  'type': 'normal', 'count': 15, 'interval': 400}, # ボス間のザコ敵
                 {'start': 42000,  'type': 'wave',   'count': 10, 'interval': 500}, # waveを追加
-                {'start': 48000,  'type': 'boss',   'count': 1,  'interval': 0},   # ステージ1の最終ボス
+                {'start': 48000,  'type': 'fast',   'count': 15,  'interval': 400}, 
+                {'start': 53000,  'type': 'normal', 'count': 15, 'interval': 500},
+                {'start': 57000,  'type': 'tank',   'count': 10,  'interval': 400}, 
+                {'start': 62000,  'type': 'boss',   'count': 1,  'interval': 0},   # ステージ1の最終ボス
             ],
             2: [ # ステージ2
                 {'start': 0,      'type': 'normal', 'count': 15, 'interval': 400},
