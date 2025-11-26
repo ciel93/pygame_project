@@ -162,8 +162,9 @@ class BossEnemy(Enemy):
     def _burst_ring(self):
         # 横方向に広がるバースト（ボス直下に複数の弾）
         if self.pattern_timer % 50 == 0:
-            for i in range(-8, 9): # さらに拡散する弾の数を増やす
-                x = int(self.rect.centerx + i * 25) # 弾同士の間隔をさらに広げる
+            for i in range(-4, 5): # 弾数を13発から9発に減らす
+                # 安全地帯をなくし、弾同士の間隔を広げる
+                x = int(self.rect.centerx + i * 30) # 弾同士の間隔をさらに広げる (25 -> 30)
                 y = self.rect.centery + 10
                 speed = 1.8 + abs(i) * 0.08
                 if self.enemy_bullet_sound:
@@ -231,7 +232,7 @@ class BossEnemy(Enemy):
 
     def _double_helix(self):
         """二重螺旋状に弾を発射する"""
-        if self.pattern_timer % 12 == 0: # 12フレーム毎に発射して、隙間をさらに粗くする
+        if self.pattern_timer % 9 == 0: # 9フレーム毎に発射して、隙間をさらに粗くする
             amplitude = 120  # 螺旋の幅を長くする
             # 螺旋の中心をゆっくりと左右に揺らし、安全地帯をなくす
             center_x = self.rect.centerx + math.cos(self.angle * 0.5) * 40
