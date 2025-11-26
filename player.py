@@ -310,7 +310,7 @@ class Player(pygame.sprite.Sprite):
             # ダメージ時にパワーアイテムをドロップ
             if self.item_group is not None:
                 num_items_to_drop = 5 # 被弾時にドロップするアイテムの数
-                spawn_offset_radius = 5 # 自機からアイテムがドロップする距離を近づける
+                spawn_offset_radius = 120 # 自機からアイテムがドロップする距離
                 for i in range(num_items_to_drop):
                     # 360度ランダムな方向を決定
                     angle = random.uniform(0, 360)
@@ -323,15 +323,21 @@ class Player(pygame.sprite.Sprite):
                     # プレイヤーの中心から少し離れた位置に、初速をつけてアイテムを生成
                     spawn_pos = pygame.math.Vector2(self.rect.center) + direction * spawn_offset_radius
                     Item(self.item_group, spawn_pos, 'power', initial_velocity=velocity, collision_cooldown=10)
-
-    def attract_items(self, attraction_area_height=150):
-        """画面上部の一定範囲でアイテムを吸い込む"""
+ 
+    def attract_items(self, attraction_area_height=150, attraction_radius=100):
+        """画面上部の自動回収、および自機周辺のアイテムを吸い込む"""
         # プレイヤーが画面の上端から指定された範囲内にいる場合
         if self.rect.top < attraction_area_height:
             if self.item_group is not None:
                 for item in self.item_group:
                     # アイテムの吸い込みフラグを立てる
                     item.is_attracted = True
+        else:
+            # 自機周辺のアイテムを引き寄せる
+            if self.item_group is not None:
+                for item in self.item_group:
+                    if self.pos.distance_to(item.pos) < attraction_radius:
+                        item.is_attracted = True
     
     def check_death(self):
         if self.alive == False:
