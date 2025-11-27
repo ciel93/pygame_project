@@ -61,5 +61,24 @@
 
 ## 📂 プロジェクト構成
 
-pygame_project/ │ ├── main.py # ゲームのメインループとエントリーポイント ├── game.py # ゲーム全体の管理クラス (Game) ├── setting.py # 画面サイズや色などの定数設定 │ ├── player.py # 自機クラス (Player) ├── enemy.py # 敵の基底クラス (Enemy) ├── enemy_subclasses.py # ザコ敵の派生クラス群 ├── boss.py # ボスの基底クラス (BossEnemy) ├── boss_subclasses.py # 各ステージのボス派生クラス群 │ ├── bullet.py # 自機弾クラス (Bullet, HomingBullet) ├── enemy_bullet.py # 敵弾クラス (EnemyBullet) ├── bomb.py # ボム（MasterSpark）クラス ├── item.py # アイテムクラス (Item) ├── explosion.py # 爆発エフェクトクラス (Explosion) │ ├── stage_manager.py # ステージ進行と敵の出現管理 ├── pooling.py # 弾のオブジェクトプールクラス (BulletPool) ├── quadtree.py # 衝突判定用のQuadtreeクラス ├── support.py # テキスト描画などのヘルパー関数 │ └── assets/ # 画像や音声ファイル ├── img/ └── sound/
-
+pygame_project/ │ 
+├── main.py # ゲームのメインループとエントリーポイント 
+├── game.py # ゲーム全体の管理クラス (Game) 
+├── setting.py # 画面サイズや色などの定数設定 │ 
+├── player.py # 自機クラス (Player) 
+├── enemy.py # 敵の基底クラス (Enemy) 
+├── enemy_subclasses.py # ザコ敵の派生クラス群 
+├── boss.py # ボスの基底クラス (BossEnemy) 
+├── boss_subclasses.py # 各ステージのボス派生クラス群 │
+├── bullet.py # 自機弾クラス (Bullet, HomingBullet) 
+├── enemy_bullet.py # 敵弾クラス (EnemyBullet) 
+├── bomb.py # ボム（MasterSpark）クラス 
+├── item.py # アイテムクラス (Item) 
+├── explosion.py # 爆発エフェクトクラス (Explosion) 
+├── stage_manager.py # ステージ進行と敵の出現管理 
+├── pooling.py # 弾のオブジェクトプールクラス (BulletPool) 
+├── quadtree.py # 衝突判定用のQuadtreeクラス 
+├── support.py # テキスト描画などのヘルパー関数 │
+└── assets/ # 画像や音声ファイル 
+├── img/ 
+└── sound/
